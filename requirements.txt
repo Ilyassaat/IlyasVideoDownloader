@@ -1,4 +1,3 @@
 Flask
 gunicorn
-yt-dlp
-yt-dlp-ejs
+yt-dlp[default]
