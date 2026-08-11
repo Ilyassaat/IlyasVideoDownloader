@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>İlyas Video Downloader</title>
+
+<style>
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    min-height: 100vh;
+    font-family: Arial, Helvetica, sans-serif;
+    background:
+        radial-gradient(circle at top left, #243b55 0%, transparent 35%),
+        radial-gradient(circle at bottom right, #1e3c72 0%, transparent 35%),
+        #080b10;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 30px;
+}
+
+.container {
+    width: 100%;
+    max-width: 850px;
+}
+
+.logo {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.logo h1 {
+    font-size: 42px;
+    font-weight: 800;
+    letter-spacing: -2px;
+}
+
+.logo span {
+    color: #4da3ff;
+}
+
+.logo p {
+    margin-top: 8px;
+    color: #8994a5;
+    font-size: 15px;
+}
+
+.card {
+    background: rgba(18, 23, 32, 0.92);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 24px;
+    padding: 28px;
+    box-shadow: 0 25px 80px rgba(0,0,0,.45);
+    backdrop-filter: blur(20px);
+}
+
+.url-area {
+    display: flex;
+    gap: 10px;
+}
+
+input {
+    flex: 1;
+    height: 56px;
+    background: #0c1118;
+    color: white;
+    border: 1px solid #293342;
+    border-radius: 14px;
+    padding: 0 18px;
+    font-size: 15px;
+    outline: none;
+}
+
+input:focus {
+    border-color: #4da3ff;
+}
+
+button {
+    border: none;
+    cursor: pointer;
+    border-radius: 14px;
+    font-weight: 700;
+    transition: .2s;
+}
+
+.analyze {
+    padding: 0 22px;
+    background: #4da3ff;
+    color: white;
+}
+
+.analyze:hover {
+    transform: translateY(-1px);
+    background: #368fe9;
+}
+
+.video-info {
+    display: none;
+    margin-top: 25px;
+    padding-top: 25px;
+    border-top: 1px solid #252c37;
+}
+
+.video-preview {
+    display: flex;
+    gap: 18px;
+    align-items: center;
+}
+
+.thumbnail {
+    width: 190px;
+    height: 108px;
+    object-fit: cover;
+    border-radius: 12px;
+    background: #0c1118;
+}
+
+.video-title {
+    font-size: 19px;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+.uploader {
+    margin-top: 8px;
+    color: #8994a5;
+    font-size: 14px;
+}
+
+.options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-top: 25px;
+}
+
+.option-box {
+    background: #0c1118;
+    border: 1px solid #252e3b;
+    padding: 18px;
+    border-radius: 16px;
+}
+
+.option-box label {
+    display: block;
+    color: #8994a5;
+    font-size: 13px;
+    margin-bottom: 9px;
+}
+
+select {
+    width: 100%;
+    height: 48px;
+    background: #151b24;
+    color: white;
+    border: 1px solid #303a48;
+    border-radius: 11px;
+    padding: 0 12px;
+    font-size: 14px;
+    outline: none;
+}
+
+.download {
+    width: 100%;
+    height: 58px;
+    margin-top: 20px;
+    background: #22c55e;
+    color: white;
+    font-size: 16px;
+}
+
+.download:hover {
+    background: #19ad50;
+    transform: translateY(-1px);
+}
+
+.download:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.status {
+    margin-top: 18px;
+    text-align: center;
+    color: #aab4c3;
+    font-size: 14px;
+    min-height: 20px;
+}
+
+.success {
+    margin-top: 20px;
+    padding: 18px;
+    background: rgba(34,197,94,.10);
+    border: 1px solid rgba(34,197,94,.25);
+    border-radius: 14px;
+    display: none;
+}
+
+.success a {
+    display: inline-block;
+    margin-top: 10px;
+    color: #4ade80;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.loading {
+    display: none;
+    margin-top: 20px;
+}
+
+.progress {
+    width: 100%;
+    height: 7px;
+    border-radius: 10px;
+    background: #202733;
+    overflow: hidden;
+}
+
+.progress-bar {
+    width: 0%;
+    height: 100%;
+    background: #4da3ff;
+    transition: width .3s;
+}
+
+.footer {
+    text-align: center;
+    color: #566171;
+    margin-top: 20px;
+    font-size: 12px;
+}
+
+@media(max-width: 650px) {
+
+    body {
+        padding: 15px;
+    }
+
+    .card {
+        padding: 18px;
+    }
+
+    .logo h1 {
+        font-size: 32px;
+    }
+
+    .url-area {
+        flex-direction: column;
+    }
+
+    .analyze {
+        height: 52px;
+    }
+
+    .video-preview {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .thumbnail {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 16/9;
+    }
+
+    .options {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="logo">
+        <h1>İlyas <span>Downloader</span></h1>
+        <p>YouTube • TikTok • Instagram • Video & Audio</p>
+    </div>
+
+    <div class="card">
+
+        <div class="url-area">
+
+            <input
+                id="videoUrl"
+                type="text"
+                placeholder="Video bağlantısını buraya yapıştır..."
+                autocomplete="off"
+            >
+
+            <button
+                class="analyze"
+                onclick="analyzeVideo()"
+            >
+                Analiz Et
+            </button>
+
+        </div>
+
+        <div class="status" id="status"></div>
+
+        <div class="loading" id="loading">
+            <div class="progress">
+                <div
+                    class="progress-bar"
+                    id="progressBar"
+                ></div>
+            </div>
+        </div>
+
+        <div class="video-info" id="videoInfo">
+
+            <div class="video-preview">
+
+                <img
+                    id="thumbnail"
+                    class="thumbnail"
+                    src=""
+                    alt="Video"
+                >
+
+                <div>
+                    <div
+                        class="video-title"
+                        id="videoTitle"
+                    >
+                    </div>
+
+                    <div
+                        class="uploader"
+                        id="uploader"
+                    >
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="options">
+
+                <div class="option-box">
+
+                    <label>
+                        Dosya Türü
+                    </label>
+
+                    <select
+                        id="downloadType"
+                        onchange="changeType()"
+                    >
+
+                        <option value="video">
+                            🎬 MP4 Video
+                        </option>
+
+                        <option value="audio">
+                            🎵 MP3 Ses
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <div
+                    class="option-box"
+                    id="videoQualityBox"
+                >
+
+                    <label>
+                        Video Kalitesi
+                    </label>
+
+                    <select id="quality">
+
+                        <option value="best">
+                            En yüksek kalite
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <div
+                    class="option-box"
+                    id="audioQualityBox"
+                    style="display:none"
+                >
+
+                    <label>
+                        MP3 Kalitesi
+                    </label>
+
+                    <select id="audioQuality">
+
+                        <option value="320">
+                            320 kbps
+                        </option>
+
+                        <option value="256">
+                            256 kbps
+                        </option>
+
+                        <option value="192" selected>
+                            192 kbps
+                        </option>
+
+                        <option value="128">
+                            128 kbps
+                        </option>
+
+                    </select>
+
+                </div>
+
+            </div>
+
+            <button
+                class="download"
+                id="downloadButton"
+                onclick="downloadVideo()"
+            >
+                ⬇ İndirmeyi Başlat
+            </button>
+
+        </div>
+
+        <div
+            class="success"
+            id="success"
+        >
+
+            <strong>
+                ✅ İndirme tamamlandı
+            </strong>
+
+            <br>
+
+            <a
+                id="downloadLink"
+                href="#"
+            >
+                Dosyayı indir
+            </a>
+
+        </div>
+
+    </div>
+
+    <div class="footer">
+        İlyas Downloader
+    </div>
+
+</div>
+
+
+<script>
+
+let currentUrl = "";
+
+
+/* -----------------------------------
+   DURUM MESAJI
+----------------------------------- */
+
+function setStatus(message) {
+
+    document.getElementById(
+        "status"
+    ).textContent = message;
+
+}
+
+
+/* -----------------------------------
+   VİDEO ANALİZ
+----------------------------------- */
+
+async function analyzeVideo() {
+
+    const url =
+        document.getElementById(
+            "videoUrl"
+        ).value.trim();
+
+    if (!url) {
+
+        setStatus(
+            "Lütfen video bağlantısı gir."
+        );
+
+        return;
+    }
+
+    currentUrl = url;
+
+    setStatus(
+        "Video analiz ediliyor..."
+    );
+
+    document.getElementById(
+        "videoInfo"
+    ).style.display = "none";
+
+    document.getElementById(
+        "success"
+    ).style.display = "none";
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/info",
+                {
+
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        url: url
+                    })
+
+                }
+            );
+
+        const data =
+            await response.json();
+
+        if (!data.success) {
+
+            throw new Error(
+                data.error ||
+                "Video analiz edilemedi."
+            );
+
+        }
+
+        document.getElementById(
+            "videoTitle"
+        ).textContent =
+            data.title || "Video";
+
+        document.getElementById(
+            "uploader"
+        ).textContent =
+            data.uploader
+            ? "Kanal: " + data.uploader
+            : "";
+
+        if (data.thumbnail) {
+
+            document.getElementById(
+                "thumbnail"
+            ).src =
+                data.thumbnail;
+
+        }
+
+        const quality =
+            document.getElementById(
+                "quality"
+            );
+
+        quality.innerHTML = "";
+
+        const bestOption =
+            document.createElement(
+                "option"
+            );
+
+        bestOption.value = "best";
+
+        bestOption.textContent =
+            "En yüksek kalite";
+
+        quality.appendChild(
+            bestOption
+        );
+
+        const resolutions =
+            data.resolutions || [];
+
+        resolutions.forEach(
+            function(height) {
+
+                const option =
+                    document.createElement(
+                        "option"
+                    );
+
+                option.value =
+                    height;
+
+                option.textContent =
+                    height + "p";
+
+                quality.appendChild(
+                    option
+                );
+
+            }
+        );
+
+        document.getElementById(
+            "videoInfo"
+        ).style.display =
+            "block";
+
+        setStatus(
+            "Video hazır."
+        );
+
+    }
+    catch(error) {
+
+        setStatus(
+            "Hata: " +
+            error.message
+        );
+
+    }
+
+}
+
+
+/* -----------------------------------
+   MP4 / MP3 DEĞİŞTİR
+----------------------------------- */
+
+function changeType() {
+
+    const type =
+        document.getElementById(
+            "downloadType"
+        ).value;
+
+    const videoBox =
+        document.getElementById(
+            "videoQualityBox"
+        );
+
+    const audioBox =
+        document.getElementById(
+            "audioQualityBox"
+        );
+
+    if (type === "audio") {
+
+        videoBox.style.display =
+            "none";
+
+        audioBox.style.display =
+            "block";
+
+    }
+    else {
+
+        videoBox.style.display =
+            "block";
+
+        audioBox.style.display =
+            "none";
+
+    }
+
+}
+
+
+/* -----------------------------------
+   İNDİR
+----------------------------------- */
+
+async function downloadVideo() {
+
+    if (!currentUrl) {
+
+        setStatus(
+            "Önce videoyu analiz et."
+        );
+
+        return;
+    }
+
+    const type =
+        document.getElementById(
+            "downloadType"
+        ).value;
+
+    const quality =
+        document.getElementById(
+            "quality"
+        ).value;
+
+    const audioQuality =
+        document.getElementById(
+            "audioQuality"
+        ).value;
+
+    const button =
+        document.getElementById(
+            "downloadButton"
+        );
+
+    button.disabled = true;
+
+    document.getElementById(
+        "success"
+    ).style.display =
+        "none";
+
+    document.getElementById(
+        "loading"
+    ).style.display =
+        "block";
+
+    let progress = 10;
+
+    document.getElementById(
+        "progressBar"
+    ).style.width =
+        progress + "%";
+
+    setStatus(
+        "İndirme hazırlanıyor..."
+    );
+
+    const timer =
+        setInterval(
+            function() {
+
+                if (progress < 90) {
+
+                    progress += 5;
+
+                    document.getElementById(
+                        "progressBar"
+                    ).style.width =
+                        progress + "%";
+
+                }
+
+            },
+            500
+        );
+
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/download",
+                {
+
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+
+                        url:
+                            currentUrl,
+
+                        type:
+                            type,
+
+                        quality:
+                            quality,
+
+                        audio_quality:
+                            audioQuality
+
+                    })
+
+                }
+            );
+
+        const data =
+            await response.json();
+
+        clearInterval(timer);
+
+        if (!data.success) {
+
+            throw new Error(
+                data.error ||
+                "İndirme başarısız."
+            );
+
+        }
+
+        document.getElementById(
+            "progressBar"
+        ).style.width =
+            "100%";
+
+        setStatus(
+            "İndirme tamamlandı."
+        );
+
+        const link =
+            document.getElementById(
+                "downloadLink"
+            );
+
+        link.href =
+            data.download_url;
+
+        link.download = "";
+
+        document.getElementById(
+            "success"
+        ).style.display =
+            "block";
+
+    }
+    catch(error) {
+
+        clearInterval(timer);
+
+        setStatus(
+            "Hata: " +
+            error.message
+        );
+
+    }
+    finally {
+
+        button.disabled = false;
+
+    }
+
+}
+
+</script>
+
+</body>
+</html>
