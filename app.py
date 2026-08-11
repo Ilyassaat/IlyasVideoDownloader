@@ -7,108 +7,69 @@ app = Flask(__name__)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-DOWNLOAD_DIR = os.path.join(
-    BASE_DIR,
-    "downloads"
-)
+DOWNLOAD_DIR = os.path.join(BASE_DIR, "downloads")
 
-os.makedirs(
-    DOWNLOAD_DIR,
-    exist_ok=True
-)
+os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-
-# =========================================================
-# YT-DLP AYARLARI
-# =========================================================
 
 def base_options():
-
     return {
-
         "quiet": False,
-
         "no_warnings": False,
-
         "noplaylist": True,
 
-        # YouTube için güncel istemci
-        "extractor_args": {
-
-            "youtube": {
-
-                "player_client": [
-                    "mweb"
-                ]
-
-            },
-
-            # Bgutil PO Token Provider
-            "youtubepot-bgutilhttp": {
-
-                "base_url":
-                    "http://127.0.0.1:4416"
-
-            }
-
-        },
-
-        # Node.js kullanıyoruz.
-        # Deno'ya bağımlı değiliz.
+        # Render üzerinde bulunan Node.js kullanılır
         "js_runtimes": {
             "node": {}
         },
 
-        # Ağ hatalarında tekrar dene
-        "retries": 3,
-
-        "fragment_retries": 3,
-
-        "retry_sleep": {
-            "http": 2,
-            "fragment": 2
+        # BGUTIL PO Token sağlayıcısı
+        "extractor_args": {
+            "youtube": {
+                "player_client": [
+                    "mweb",
+                    "web_safari",
+                    "tv"
+                ]
+            },
+            "youtubepot-bgutilhttp": {
+                "base_url": "http://127.0.0.1:4416"
+            }
         },
 
-        # IPv4 kullan
-        "source_address": "0.0.0.0"
+        # Daha stabil bağlantı
+        "retries": 5,
+        "fragment_retries": 5,
+        "socket_timeout": 30,
 
+        # IPv4 kullan
+        "source_address": "0.0.0.0",
+
+        # User-Agent
+        "http_headers": {
+            "User-Agent":
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 "
+                "(KHTML, like Gecko) "
+                "Chrome/151.0.0.0 Safari/537.36"
+        }
     }
 
 
-# =========================================================
-# ANA SAYFA
-# =========================================================
-
 @app.route("/")
 def home():
-
-    return send_from_directory(
-        BASE_DIR,
-        "index.html"
-    )
+    return send_from_directory(BASE_DIR, "index.html")
 
 
-# =========================================================
-# VIDEO BILGISI
-# =========================================================
-
-@app.route(
-    "/api/info",
-    methods=["POST"]
-)
+@app.route("/api/info", methods=["POST"])
 def video_info():
 
     data = request.get_json()
 
     if not data or not data.get("url"):
-
         return jsonify({
-
             "success": False,
-
-            "error":
-                "Video URL bulunamadı."
-
+            "error": "Video URL bulunamadı."
         }), 400
 
     url = data["url"].strip()
@@ -116,56 +77,42 @@ def video_info():
     try:
 
         options = base_options()
-
         options["skip_download"] = True
 
-        with yt_dlp.YoutubeDL(
-            options
-        ) as ydl:
+        with yt_dlp.YoutubeDL(options) as ydl:
 
             info = ydl.extract_info(
                 url,
                 download=False
             )
 
-        formats = info.get(
-            "formats",
-            []
-        )
+        formats = info.get("formats", [])
 
         resolutions = set()
 
         for fmt in formats:
 
-            height = fmt.get(
-                "height"
-            )
+            height = fmt.get("height")
 
             if not height:
                 continue
 
             if height >= 2160:
-
                 resolutions.add(2160)
 
             elif height >= 1440:
-
                 resolutions.add(1440)
 
             elif height >= 1080:
-
                 resolutions.add(1080)
 
             elif height >= 720:
-
                 resolutions.add(720)
 
             elif height >= 480:
-
                 resolutions.add(480)
 
             elif height >= 360:
-
                 resolutions.add(360)
 
         resolutions = sorted(
@@ -177,57 +124,32 @@ def video_info():
 
             "success": True,
 
-            "title":
-                info.get(
-                    "title",
-                    "Bilinmeyen video"
-                ),
+            "title": info.get(
+                "title",
+                "Bilinmeyen video"
+            ),
 
-            "duration":
-                info.get(
-                    "duration"
-                ),
+            "duration": info.get("duration"),
 
-            "thumbnail":
-                info.get(
-                    "thumbnail"
-                ),
+            "thumbnail": info.get("thumbnail"),
 
-            "uploader":
-                info.get(
-                    "uploader"
-                ),
+            "uploader": info.get("uploader"),
 
-            "resolutions":
-                resolutions
+            "resolutions": resolutions
 
         })
 
     except Exception as e:
 
-        print(
-            "INFO HATASI:",
-            str(e)
-        )
+        print("INFO HATASI:", str(e))
 
         return jsonify({
-
             "success": False,
-
-            "error":
-                str(e)
-
+            "error": str(e)
         }), 500
 
 
-# =========================================================
-# VIDEO / AUDIO DOWNLOAD
-# =========================================================
-
-@app.route(
-    "/api/download",
-    methods=["POST"]
-)
+@app.route("/api/download", methods=["POST"])
 def download_video():
 
     data = request.get_json()
@@ -235,12 +157,8 @@ def download_video():
     if not data or not data.get("url"):
 
         return jsonify({
-
             "success": False,
-
-            "error":
-                "Video URL bulunamadı."
-
+            "error": "Video URL bulunamadı."
         }), 400
 
     url = data["url"].strip()
@@ -260,23 +178,18 @@ def download_video():
         "192"
     )
 
-    file_id = str(
-        uuid.uuid4()
-    )
+    file_id = str(uuid.uuid4())
 
     output_template = os.path.join(
-
         DOWNLOAD_DIR,
-
         f"{file_id}.%(ext)s"
-
     )
 
     try:
 
-        # =================================================
+        # =========================
         # MP3
-        # =================================================
+        # =========================
 
         if download_type == "audio":
 
@@ -291,9 +204,7 @@ def download_video():
                     output_template,
 
                 "postprocessors": [
-
                     {
-
                         "key":
                             "FFmpegExtractAudio",
 
@@ -301,43 +212,33 @@ def download_video():
                             "mp3",
 
                         "preferredquality":
-                            str(
-                                audio_quality
-                            )
-
+                            str(audio_quality)
                     }
-
                 ]
 
             })
 
-        # =================================================
+        # =========================
         # MP4
-        # =================================================
+        # =========================
 
         else:
 
             if quality == "best":
 
                 video_format = (
-
-                    "bestvideo+bestaudio/"
+                    "bestvideo*+bestaudio/"
                     "best"
-
                 )
 
             else:
 
-                height = int(
-                    quality
-                )
+                height = int(quality)
 
                 video_format = (
-
                     f"bestvideo[height<={height}]"
                     "+bestaudio/"
                     f"best[height<={height}]"
-
                 )
 
             options = base_options()
@@ -355,54 +256,26 @@ def download_video():
 
             })
 
-        print(
-            "===================================="
-        )
+        print("====================================")
+        print("İNDİRME BAŞLIYOR")
+        print("URL:", url)
+        print("TYPE:", download_type)
+        print("QUALITY:", quality)
+        print("====================================")
 
-        print(
-            "ILYAS DOWNLOADER"
-        )
-
-        print(
-            "İndirme başlıyor..."
-        )
-
-        print(
-            "URL:",
-            url
-        )
-
-        print(
-            "===================================="
-        )
-
-        with yt_dlp.YoutubeDL(
-            options
-        ) as ydl:
+        with yt_dlp.YoutubeDL(options) as ydl:
 
             info = ydl.extract_info(
                 url,
                 download=True
             )
 
-        # =================================================
-        # DOSYA BUL
-        # =================================================
-
-        files = os.listdir(
-            DOWNLOAD_DIR
-        )
+        files = os.listdir(DOWNLOAD_DIR)
 
         matching_files = [
-
             file
-
             for file in files
-
-            if file.startswith(
-                file_id
-            )
-
+            if file.startswith(file_id)
         ]
 
         if not matching_files:
@@ -414,7 +287,7 @@ def download_video():
         filename = matching_files[0]
 
         print(
-            "İndirme tamamlandı:",
+            "İNDİRME TAMAMLANDI:",
             filename
         )
 
@@ -422,18 +295,15 @@ def download_video():
 
             "success": True,
 
-            "title":
-                info.get(
-                    "title",
-                    "Video"
-                ),
+            "title": info.get(
+                "title",
+                "Video"
+            ),
 
-            "filename":
-                filename,
+            "filename": filename,
 
             "download_url":
-                "/api/file/" +
-                filename
+                "/api/file/" + filename
 
         })
 
@@ -448,19 +318,12 @@ def download_video():
 
             "success": False,
 
-            "error":
-                str(e)
+            "error": str(e)
 
         }), 500
 
 
-# =========================================================
-# DOSYA SERVISI
-# =========================================================
-
-@app.route(
-    "/api/file/<filename>"
-)
+@app.route("/api/file/<filename>")
 def serve_file(filename):
 
     safe_filename = os.path.basename(
@@ -468,16 +331,11 @@ def serve_file(filename):
     )
 
     file_path = os.path.join(
-
         DOWNLOAD_DIR,
-
         safe_filename
-
     )
 
-    if not os.path.exists(
-        file_path
-    ):
+    if not os.path.exists(file_path):
 
         return jsonify({
 
@@ -489,27 +347,21 @@ def serve_file(filename):
         }), 404
 
     return send_file(
-
         file_path,
-
         as_attachment=True
-
     )
 
 
-# =========================================================
-# TEST
-# =========================================================
-
-@app.route("/api/health")
-def health():
+@app.route("/api/status")
+def status():
 
     return jsonify({
 
-        "status": "ok",
-
         "service":
             "Ilyas Downloader",
+
+        "status":
+            "ok",
 
         "yt_dlp":
             yt_dlp.version.__version__,
@@ -523,35 +375,14 @@ def health():
     })
 
 
-# =========================================================
-# LOCAL CALISTIRMA
-# =========================================================
-
 if __name__ == "__main__":
 
-    print("")
-    print(
-        "===================================="
-    )
-    print(
-        "       ILYAS VIDEO DOWNLOADER"
-    )
-    print(
-        "===================================="
-    )
-    print("")
-
     app.run(
-
         host="0.0.0.0",
-
         port=int(
             os.environ.get(
                 "PORT",
                 5000
             )
-        ),
-
-        debug=False
-
+        )
     )
