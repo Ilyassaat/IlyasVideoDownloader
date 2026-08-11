@@ -2,41 +2,82 @@ from flask import Flask, request, jsonify, send_from_directory, send_file
 import yt_dlp
 import os
 import uuid
-import shutil
+import glob
 
 app = Flask(__name__)
 
+# =========================================================
+# KLASÖRLER
+# =========================================================
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-DOWNLOAD_DIR = os.path.join(BASE_DIR, "downloads")
+DOWNLOAD_DIR = os.path.join(
+    BASE_DIR,
+    "downloads"
+)
 
-os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+# bgutil artık /opt/bgutil değil,
+# projenin kendi klasöründe olacak.
+BGUTIL_SERVER = os.path.join(
+    BASE_DIR,
+    "bgutil",
+    "server"
+)
 
-# Render/Linux üzerinde sistemde kurulu programları bul
-FFMPEG_PATH = shutil.which("ffmpeg")
-DENO_PATH = shutil.which("deno")
+# Render ortamında ffmpeg PATH üzerinden geliyor.
+# Bu nedenle Windows'taki ffmpeg klasörünü kullanmıyoruz.
+FFMPEG_LOCATION = "ffmpeg"
 
+
+os.makedirs(
+    DOWNLOAD_DIR,
+    exist_ok=True
+)
+
+
+# =========================================================
+# YT-DLP AYARLARI
+# =========================================================
 
 def base_options():
 
     options = {
         "quiet": False,
         "no_warnings": False,
+
         "noplaylist": True,
+
+        # YouTube JavaScript challenge
+        # Deno yerine Render'daki Node kullanılıyor.
+        "js_runtimes": {
+            "node": {}
+        },
+
+        # YouTube PO Token sağlayıcısı
+        "extractor_args": {
+            "youtubepot-bgutilscript": {
+                "server_home": BGUTIL_SERVER
+            }
+        },
+
+        # FFmpeg Render sisteminden kullanılacak.
+        "ffmpeg_location": FFMPEG_LOCATION,
+
+        # Daha stabil ağ bağlantısı
+        "retries": 3,
+        "fragment_retries": 3,
+
+        # HTTPS
+        "nocheckcertificate": False,
     }
-
-    # FFmpeg varsa kullan
-    if FFMPEG_PATH:
-        options["ffmpeg_location"] = FFMPEG_PATH
-
-    # Deno varsa yt-dlp JavaScript runtime olarak kullan
-    if DENO_PATH:
-        options["js_runtimes"] = {
-            "deno": {}
-        }
 
     return options
 
+
+# =========================================================
+# ANA SAYFA
+# =========================================================
 
 @app.route("/")
 def home():
@@ -47,7 +88,14 @@ def home():
     )
 
 
-@app.route("/api/info", methods=["POST"])
+# =========================================================
+# VIDEO BİLGİSİ
+# =========================================================
+
+@app.route(
+    "/api/info",
+    methods=["POST"]
+)
 def video_info():
 
     data = request.get_json()
@@ -67,14 +115,19 @@ def video_info():
 
         options["skip_download"] = True
 
-        with yt_dlp.YoutubeDL(options) as ydl:
+        with yt_dlp.YoutubeDL(
+            options
+        ) as ydl:
 
             info = ydl.extract_info(
                 url,
                 download=False
             )
 
-        formats = info.get("formats", [])
+        formats = info.get(
+            "formats",
+            []
+        )
 
         resolutions = set()
 
@@ -117,11 +170,17 @@ def video_info():
                 "Bilinmeyen video"
             ),
 
-            "duration": info.get("duration"),
+            "duration": info.get(
+                "duration"
+            ),
 
-            "thumbnail": info.get("thumbnail"),
+            "thumbnail": info.get(
+                "thumbnail"
+            ),
 
-            "uploader": info.get("uploader"),
+            "uploader": info.get(
+                "uploader"
+            ),
 
             "resolutions": resolutions
 
@@ -129,7 +188,10 @@ def video_info():
 
     except Exception as e:
 
-        print("INFO HATASI:", str(e))
+        print(
+            "INFO HATASI:",
+            str(e)
+        )
 
         return jsonify({
 
@@ -140,7 +202,14 @@ def video_info():
         }), 500
 
 
-@app.route("/api/download", methods=["POST"])
+# =========================================================
+# VIDEO / MP3 İNDİRME
+# =========================================================
+
+@app.route(
+    "/api/download",
+    methods=["POST"]
+)
 def download_video():
 
     data = request.get_json()
@@ -151,7 +220,8 @@ def download_video():
 
             "success": False,
 
-            "error": "Video URL bulunamadı."
+            "error":
+                "Video URL bulunamadı."
 
         }), 400
 
@@ -172,7 +242,9 @@ def download_video():
         "192"
     )
 
-    file_id = str(uuid.uuid4())
+    file_id = str(
+        uuid.uuid4()
+    )
 
     output_template = os.path.join(
         DOWNLOAD_DIR,
@@ -181,9 +253,9 @@ def download_video():
 
     try:
 
-        # ==========================
+        # =================================================
         # MP3
-        # ==========================
+        # =================================================
 
         if download_type == "audio":
 
@@ -209,12 +281,14 @@ def download_video():
                         "preferredquality":
                             str(audio_quality)
                     }
+
                 ]
+
             })
 
-        # ==========================
+        # =================================================
         # MP4
-        # ==========================
+        # =================================================
 
         else:
 
@@ -227,7 +301,15 @@ def download_video():
 
             else:
 
-                height = int(quality)
+                try:
+
+                    height = int(
+                        quality
+                    )
+
+                except ValueError:
+
+                    height = 1080
 
                 video_format = (
                     f"bestvideo[height<={height}]"
@@ -247,16 +329,50 @@ def download_video():
 
                 "merge_output_format":
                     "mp4"
+
             })
 
-        print("İndirme başlıyor...")
+        print("")
+        print(
+            "======================================"
+        )
+        print(
+            "       ILYAS VIDEO DOWNLOADER"
+        )
+        print(
+            "       İNDİRME BAŞLIYOR"
+        )
+        print(
+            "======================================"
+        )
+        print(
+            "URL:",
+            url
+        )
+        print(
+            "TIP:",
+            download_type
+        )
+        print(
+            "KALİTE:",
+            quality
+        )
+        print(
+            "======================================"
+        )
 
-        with yt_dlp.YoutubeDL(options) as ydl:
+        with yt_dlp.YoutubeDL(
+            options
+        ) as ydl:
 
             info = ydl.extract_info(
                 url,
                 download=True
             )
+
+        # =================================================
+        # DOSYAYI BUL
+        # =================================================
 
         files = os.listdir(
             DOWNLOAD_DIR
@@ -268,7 +384,9 @@ def download_video():
 
             for file in files
 
-            if file.startswith(file_id)
+            if file.startswith(
+                file_id
+            )
 
         ]
 
@@ -279,6 +397,19 @@ def download_video():
             )
 
         filename = matching_files[0]
+
+        file_path = os.path.join(
+            DOWNLOAD_DIR,
+            filename
+        )
+
+        if not os.path.exists(
+            file_path
+        ):
+
+            raise Exception(
+                "Dosya fiziksel olarak bulunamadı."
+            )
 
         print(
             "İndirme tamamlandı:",
@@ -294,30 +425,43 @@ def download_video():
                 "Video"
             ),
 
-            "filename": filename,
+            "filename":
+                filename,
 
             "download_url":
-                "/api/file/" + filename
+                "/api/file/" +
+                filename
 
         })
 
     except Exception as e:
 
+        print("")
         print(
-            "DOWNLOAD HATASI:",
+            "DOWNLOAD HATASI:"
+        )
+        print(
             str(e)
         )
+        print("")
 
         return jsonify({
 
             "success": False,
 
-            "error": str(e)
+            "error":
+                str(e)
 
         }), 500
 
 
-@app.route("/api/file/<filename>")
+# =========================================================
+# DOSYA SERVİSİ
+# =========================================================
+
+@app.route(
+    "/api/file/<filename>"
+)
 def serve_file(filename):
 
     safe_filename = os.path.basename(
@@ -329,13 +473,16 @@ def serve_file(filename):
         safe_filename
     )
 
-    if not os.path.exists(file_path):
+    if not os.path.exists(
+        file_path
+    ):
 
         return jsonify({
 
             "success": False,
 
-            "error": "Dosya bulunamadı."
+            "error":
+                "Dosya bulunamadı."
 
         }), 404
 
@@ -345,30 +492,76 @@ def serve_file(filename):
     )
 
 
+# =========================================================
+# SAĞLIK KONTROLÜ
+# =========================================================
+
+@app.route("/health")
+def health():
+
+    return jsonify({
+
+        "status": "ok",
+
+        "yt_dlp": yt_dlp.version.__version__,
+
+        "ffmpeg":
+            "system",
+
+        "node":
+            "enabled",
+
+        "bgutil":
+            os.path.exists(
+                BGUTIL_SERVER
+            )
+
+    })
+
+
+# =========================================================
+# LOCAL ÇALIŞTIRMA
+# =========================================================
+
 if __name__ == "__main__":
 
     print("")
-    print("====================================")
-    print("       ILYAS VIDEO DOWNLOADER")
-    print("====================================")
+    print(
+        "===================================="
+    )
+    print(
+        "       ILYAS VIDEO DOWNLOADER"
+    )
+    print(
+        "===================================="
+    )
 
-    print("FFmpeg:", FFMPEG_PATH)
-    print("Deno:", DENO_PATH)
+    print(
+        "Base:",
+        BASE_DIR
+    )
 
-    print("FFmpeg mevcut:", bool(FFMPEG_PATH))
-    print("Deno mevcut:", bool(DENO_PATH))
+    print(
+        "Downloads:",
+        DOWNLOAD_DIR
+    )
 
-    print("")
+    print(
+        "BGUTIL:",
+        BGUTIL_SERVER
+    )
 
-    port = int(
-        os.environ.get(
-            "PORT",
-            5000
+    print(
+        "BGUTIL mevcut:",
+        os.path.exists(
+            BGUTIL_SERVER
         )
     )
 
+    print("")
+
     app.run(
-        host="0.0.0.0",
-        port=port,
-        debug=False
+        host="127.0.0.1",
+        port=5000,
+        debug=True
     )
