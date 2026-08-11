@@ -1,3 +1,4 @@
 Flask
 yt-dlp
 gunicorn
+bgutil-ytdlp-pot-provider
