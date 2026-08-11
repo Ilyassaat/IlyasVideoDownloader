@@ -5,24 +5,12 @@ import uuid
 
 app = Flask(__name__)
 
-# =========================================================
-# KLASÖRLER
-# =========================================================
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 DOWNLOAD_DIR = os.path.join(
     BASE_DIR,
     "downloads"
 )
-
-BGUTIL_SERVER = os.path.join(
-    BASE_DIR,
-    "bgutil",
-    "server"
-)
-
-FFMPEG_LOCATION = "ffmpeg"
 
 os.makedirs(
     DOWNLOAD_DIR,
@@ -37,35 +25,53 @@ os.makedirs(
 def base_options():
 
     return {
+
         "quiet": False,
+
         "no_warnings": False,
+
         "noplaylist": True,
 
-        # YouTube JavaScript desteği
+        # YouTube için güncel istemci
+        "extractor_args": {
+
+            "youtube": {
+
+                "player_client": [
+                    "mweb"
+                ]
+
+            },
+
+            # Bgutil PO Token Provider
+            "youtubepot-bgutilhttp": {
+
+                "base_url":
+                    "http://127.0.0.1:4416"
+
+            }
+
+        },
+
+        # Node.js kullanıyoruz.
+        # Deno'ya bağımlı değiliz.
         "js_runtimes": {
             "node": {}
         },
 
-        # BGUTIL PO Token sağlayıcısı
-        "extractor_args": {
-            "youtubepot-bgutilscript": {
-                "server_home": BGUTIL_SERVER
-            }
-        },
-
-        # Render sistemindeki FFmpeg
-        "ffmpeg_location": FFMPEG_LOCATION,
-
+        # Ağ hatalarında tekrar dene
         "retries": 3,
+
         "fragment_retries": 3,
 
-        "nocheckcertificate": False,
+        "retry_sleep": {
+            "http": 2,
+            "fragment": 2
+        },
 
-        # Ağ ayarları
-        "socket_timeout": 30,
+        # IPv4 kullan
+        "source_address": "0.0.0.0"
 
-        # Playlist istemiyoruz
-        "noplaylist": True,
     }
 
 
@@ -83,7 +89,7 @@ def home():
 
 
 # =========================================================
-# VIDEO BİLGİSİ
+# VIDEO BILGISI
 # =========================================================
 
 @app.route(
@@ -92,15 +98,17 @@ def home():
 )
 def video_info():
 
-    data = request.get_json(
-        silent=True
-    )
+    data = request.get_json()
 
     if not data or not data.get("url"):
 
         return jsonify({
+
             "success": False,
-            "error": "Video URL bulunamadı."
+
+            "error":
+                "Video URL bulunamadı."
+
         }), 400
 
     url = data["url"].strip()
@@ -137,21 +145,27 @@ def video_info():
                 continue
 
             if height >= 2160:
+
                 resolutions.add(2160)
 
             elif height >= 1440:
+
                 resolutions.add(1440)
 
             elif height >= 1080:
+
                 resolutions.add(1080)
 
             elif height >= 720:
+
                 resolutions.add(720)
 
             elif height >= 480:
+
                 resolutions.add(480)
 
             elif height >= 360:
+
                 resolutions.add(360)
 
         resolutions = sorted(
@@ -163,60 +177,51 @@ def video_info():
 
             "success": True,
 
-            "title": info.get(
-                "title",
-                "Bilinmeyen video"
-            ),
+            "title":
+                info.get(
+                    "title",
+                    "Bilinmeyen video"
+                ),
 
-            "duration": info.get(
-                "duration"
-            ),
+            "duration":
+                info.get(
+                    "duration"
+                ),
 
-            "thumbnail": info.get(
-                "thumbnail"
-            ),
+            "thumbnail":
+                info.get(
+                    "thumbnail"
+                ),
 
-            "uploader": info.get(
-                "uploader"
-            ),
+            "uploader":
+                info.get(
+                    "uploader"
+                ),
 
-            "resolutions": resolutions
+            "resolutions":
+                resolutions
 
         })
 
     except Exception as e:
 
-        error_text = str(e)
-
         print(
             "INFO HATASI:",
-            error_text
+            str(e)
         )
-
-        # Kullanıcıya daha anlaşılır hata
-        if (
-            "Sign in to confirm" in error_text
-            or "not a bot" in error_text
-        ):
-
-            error_text = (
-                "YouTube bu videonun sunucudan "
-                "erişilmesini geçici olarak engelledi. "
-                "Lütfen başka bir video deneyin."
-            )
 
         return jsonify({
 
             "success": False,
 
             "error":
-                error_text
+                str(e)
 
         }), 500
 
 
 # =========================================================
-# VIDEO / MP3 İNDİRME
+# VIDEO / AUDIO DOWNLOAD
 # =========================================================
 
 @app.route(
@@ -225,9 +230,7 @@ def video_info():
 )
 def download_video():
 
-    data = request.get_json(
-        silent=True
-    )
+    data = request.get_json()
 
     if not data or not data.get("url"):
 
@@ -262,8 +265,11 @@ def download_video():
     )
 
     output_template = os.path.join(
+
         DOWNLOAD_DIR,
+
         f"{file_id}.%(ext)s"
+
     )
 
     try:
@@ -287,6 +293,7 @@ def download_video():
                 "postprocessors": [
 
                     {
+
                         "key":
                             "FFmpegExtractAudio",
 
@@ -294,7 +301,10 @@ def download_video():
                             "mp3",
 
                         "preferredquality":
-                            str(audio_quality)
+                            str(
+                                audio_quality
+                            )
+
                     }
 
                 ]
@@ -310,29 +320,24 @@ def download_video():
             if quality == "best":
 
                 video_format = (
+
                     "bestvideo+bestaudio/"
                     "best"
+
                 )
 
             else:
 
-                try:
-
-                    height = int(
-                        quality
-                    )
-
-                except (
-                    ValueError,
-                    TypeError
-                ):
-
-                    height = 1080
+                height = int(
+                    quality
+                )
 
                 video_format = (
+
                     f"bestvideo[height<={height}]"
                     "+bestaudio/"
                     f"best[height<={height}]"
+
                 )
 
             options = base_options()
@@ -350,30 +355,25 @@ def download_video():
 
             })
 
-        print("")
         print(
-            "======================================"
+            "===================================="
         )
+
         print(
-            "       ILYAS VIDEO DOWNLOADER"
+            "ILYAS DOWNLOADER"
         )
+
         print(
-            "======================================"
+            "İndirme başlıyor..."
         )
+
         print(
             "URL:",
             url
         )
+
         print(
-            "TIP:",
-            download_type
-        )
-        print(
-            "KALİTE:",
-            quality
-        )
-        print(
-            "======================================"
+            "===================================="
         )
 
         with yt_dlp.YoutubeDL(
@@ -386,7 +386,7 @@ def download_video():
             )
 
         # =================================================
-        # İNDİRİLEN DOSYAYI BUL
+        # DOSYA BUL
         # =================================================
 
         files = os.listdir(
@@ -413,19 +413,6 @@ def download_video():
 
         filename = matching_files[0]
 
-        file_path = os.path.join(
-            DOWNLOAD_DIR,
-            filename
-        )
-
-        if not os.path.exists(
-            file_path
-        ):
-
-            raise Exception(
-                "Dosya fiziksel olarak bulunamadı."
-            )
-
         print(
             "İndirme tamamlandı:",
             filename
@@ -435,10 +422,11 @@ def download_video():
 
             "success": True,
 
-            "title": info.get(
-                "title",
-                "Video"
-            ),
+            "title":
+                info.get(
+                    "title",
+                    "Video"
+                ),
 
             "filename":
                 filename,
@@ -451,40 +439,23 @@ def download_video():
 
     except Exception as e:
 
-        error_text = str(e)
-
-        print("")
         print(
-            "DOWNLOAD HATASI:"
+            "DOWNLOAD HATASI:",
+            str(e)
         )
-        print(
-            error_text
-        )
-        print("")
-
-        if (
-            "Sign in to confirm" in error_text
-            or "not a bot" in error_text
-        ):
-
-            error_text = (
-                "YouTube bu videonun sunucudan "
-                "indirilmesini geçici olarak engelledi. "
-                "Lütfen başka bir video deneyin."
-            )
 
         return jsonify({
 
             "success": False,
 
             "error":
-                error_text
+                str(e)
 
         }), 500
 
 
 # =========================================================
-# DOSYA İNDİRME
+# DOSYA SERVISI
 # =========================================================
 
 @app.route(
@@ -497,8 +468,11 @@ def serve_file(filename):
     )
 
     file_path = os.path.join(
+
         DOWNLOAD_DIR,
+
         safe_filename
+
     )
 
     if not os.path.exists(
@@ -515,42 +489,42 @@ def serve_file(filename):
         }), 404
 
     return send_file(
+
         file_path,
+
         as_attachment=True
+
     )
 
 
 # =========================================================
-# HEALTH CHECK
+# TEST
 # =========================================================
 
-@app.route("/health")
+@app.route("/api/health")
 def health():
 
     return jsonify({
 
-        "status":
-            "ok",
+        "status": "ok",
+
+        "service":
+            "Ilyas Downloader",
 
         "yt_dlp":
             yt_dlp.version.__version__,
 
-        "ffmpeg":
-            "system",
-
-        "node":
+        "bgutil":
             "enabled",
 
-        "bgutil":
-            os.path.exists(
-                BGUTIL_SERVER
-            )
+        "node":
+            "enabled"
 
     })
 
 
 # =========================================================
-# LOCAL ÇALIŞTIRMA
+# LOCAL CALISTIRMA
 # =========================================================
 
 if __name__ == "__main__":
@@ -565,33 +539,19 @@ if __name__ == "__main__":
     print(
         "===================================="
     )
-
-    print(
-        "Base:",
-        BASE_DIR
-    )
-
-    print(
-        "Downloads:",
-        DOWNLOAD_DIR
-    )
-
-    print(
-        "BGUTIL:",
-        BGUTIL_SERVER
-    )
-
-    print(
-        "BGUTIL mevcut:",
-        os.path.exists(
-            BGUTIL_SERVER
-        )
-    )
-
     print("")
 
     app.run(
-        host="127.0.0.1",
-        port=5000,
-        debug=True
+
+        host="0.0.0.0",
+
+        port=int(
+            os.environ.get(
+                "PORT",
+                5000
+            )
+        ),
+
+        debug=False
+
     )
