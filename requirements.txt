@@ -1,4 +1,4 @@
 Flask
-yt-dlp
 gunicorn
-bgutil-ytdlp-pot-provider
+yt-dlp
+yt-dlp-ejs
