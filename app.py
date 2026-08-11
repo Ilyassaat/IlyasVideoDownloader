@@ -2,7 +2,6 @@ from flask import Flask, request, jsonify, send_from_directory, send_file
 import yt_dlp
 import os
 import uuid
-import glob
 
 app = Flask(__name__)
 
@@ -17,18 +16,13 @@ DOWNLOAD_DIR = os.path.join(
     "downloads"
 )
 
-# bgutil artık /opt/bgutil değil,
-# projenin kendi klasöründe olacak.
 BGUTIL_SERVER = os.path.join(
     BASE_DIR,
     "bgutil",
     "server"
 )
 
-# Render ortamında ffmpeg PATH üzerinden geliyor.
-# Bu nedenle Windows'taki ffmpeg klasörünü kullanmıyoruz.
 FFMPEG_LOCATION = "ffmpeg"
-
 
 os.makedirs(
     DOWNLOAD_DIR,
@@ -42,37 +36,37 @@ os.makedirs(
 
 def base_options():
 
-    options = {
+    return {
         "quiet": False,
         "no_warnings": False,
-
         "noplaylist": True,
 
-        # YouTube JavaScript challenge
-        # Deno yerine Render'daki Node kullanılıyor.
+        # YouTube JavaScript desteği
         "js_runtimes": {
             "node": {}
         },
 
-        # YouTube PO Token sağlayıcısı
+        # BGUTIL PO Token sağlayıcısı
         "extractor_args": {
             "youtubepot-bgutilscript": {
                 "server_home": BGUTIL_SERVER
             }
         },
 
-        # FFmpeg Render sisteminden kullanılacak.
+        # Render sistemindeki FFmpeg
         "ffmpeg_location": FFMPEG_LOCATION,
 
-        # Daha stabil ağ bağlantısı
         "retries": 3,
         "fragment_retries": 3,
 
-        # HTTPS
         "nocheckcertificate": False,
-    }
 
-    return options
+        # Ağ ayarları
+        "socket_timeout": 30,
+
+        # Playlist istemiyoruz
+        "noplaylist": True,
+    }
 
 
 # =========================================================
@@ -98,7 +92,9 @@ def home():
 )
 def video_info():
 
-    data = request.get_json()
+    data = request.get_json(
+        silent=True
+    )
 
     if not data or not data.get("url"):
 
@@ -133,7 +129,9 @@ def video_info():
 
         for fmt in formats:
 
-            height = fmt.get("height")
+            height = fmt.get(
+                "height"
+            )
 
             if not height:
                 continue
@@ -188,16 +186,31 @@ def video_info():
 
     except Exception as e:
 
+        error_text = str(e)
+
         print(
             "INFO HATASI:",
-            str(e)
+            error_text
         )
+
+        # Kullanıcıya daha anlaşılır hata
+        if (
+            "Sign in to confirm" in error_text
+            or "not a bot" in error_text
+        ):
+
+            error_text = (
+                "YouTube bu videonun sunucudan "
+                "erişilmesini geçici olarak engelledi. "
+                "Lütfen başka bir video deneyin."
+            )
 
         return jsonify({
 
             "success": False,
 
-            "error": str(e)
+            "error":
+                error_text
 
         }), 500
 
@@ -212,7 +225,9 @@ def video_info():
 )
 def download_video():
 
-    data = request.get_json()
+    data = request.get_json(
+        silent=True
+    )
 
     if not data or not data.get("url"):
 
@@ -307,7 +322,10 @@ def download_video():
                         quality
                     )
 
-                except ValueError:
+                except (
+                    ValueError,
+                    TypeError
+                ):
 
                     height = 1080
 
@@ -340,9 +358,6 @@ def download_video():
             "       ILYAS VIDEO DOWNLOADER"
         )
         print(
-            "       İNDİRME BAŞLIYOR"
-        )
-        print(
             "======================================"
         )
         print(
@@ -371,7 +386,7 @@ def download_video():
             )
 
         # =================================================
-        # DOSYAYI BUL
+        # İNDİRİLEN DOSYAYI BUL
         # =================================================
 
         files = os.listdir(
@@ -436,27 +451,40 @@ def download_video():
 
     except Exception as e:
 
+        error_text = str(e)
+
         print("")
         print(
             "DOWNLOAD HATASI:"
         )
         print(
-            str(e)
+            error_text
         )
         print("")
+
+        if (
+            "Sign in to confirm" in error_text
+            or "not a bot" in error_text
+        ):
+
+            error_text = (
+                "YouTube bu videonun sunucudan "
+                "indirilmesini geçici olarak engelledi. "
+                "Lütfen başka bir video deneyin."
+            )
 
         return jsonify({
 
             "success": False,
 
             "error":
-                str(e)
+                error_text
 
         }), 500
 
 
 # =========================================================
-# DOSYA SERVİSİ
+# DOSYA İNDİRME
 # =========================================================
 
 @app.route(
@@ -493,7 +521,7 @@ def serve_file(filename):
 
 
 # =========================================================
-# SAĞLIK KONTROLÜ
+# HEALTH CHECK
 # =========================================================
 
 @app.route("/health")
@@ -501,9 +529,11 @@ def health():
 
     return jsonify({
 
-        "status": "ok",
+        "status":
+            "ok",
 
-        "yt_dlp": yt_dlp.version.__version__,
+        "yt_dlp":
+            yt_dlp.version.__version__,
 
         "ffmpeg":
             "system",
