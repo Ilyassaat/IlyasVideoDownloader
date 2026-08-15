@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Ilyas Video Downloader</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #0d1117;
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 800px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 42px;
+            margin-bottom: 10px;
+        }
+
+        p {
+            color: #8b949e;
+        }
+
+        .box {
+            margin-top: 30px;
+            background: #161b22;
+            padding: 30px;
+            border-radius: 16px;
+        }
+
+        input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 16px;
+            border-radius: 10px;
+            border: 1px solid #30363d;
+            background: #0d1117;
+            color: white;
+            font-size: 16px;
+        }
+
+        button {
+            margin-top: 15px;
+            padding: 14px 25px;
+            border: none;
+            border-radius: 10px;
+            background: #238636;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #2ea043;
+        }
+
+        #result {
+            margin-top: 25px;
+        }
+
+        .error {
+            color: #ff7b72;
+        }
+
+        .success {
+            color: #3fb950;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>İlyas Video Downloader</h1>
+
+    <p>YouTube videolarını indir</p>
+
+    <div class="box">
+
+        <input
+            id="url"
+            type="text"
+            placeholder="YouTube video linkini buraya yapıştır"
+        >
+
+        <button onclick="getInfo()">
+            Video Bilgilerini Getir
+        </button>
+
+        <div id="result"></div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+async function getInfo() {
+
+    const url = document
+        .getElementById("url")
+        .value
+        .trim();
+
+    const result =
+        document.getElementById("result");
+
+    if (!url) {
+
+        result.innerHTML =
+            '<p class="error">Link gir.</p>';
+
+        return;
+    }
+
+    result.innerHTML =
+        "<p>Video bilgileri alınıyor...</p>";
+
+    try {
+
+        const response =
+            await fetch("/api/info", {
+
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify({
+                    url: url
+                })
+            });
+
+        const data =
+            await response.json();
+
+        if (!data.success) {
+
+            result.innerHTML =
+                `<p class="error">${data.error}</p>`;
+
+            return;
+        }
+
+        let html = "";
+
+        html += `
+            <h2>${escapeHtml(data.title)}</h2>
+        `;
+
+        if (data.thumbnail) {
+
+            html += `
+                <img
+                    src="${data.thumbnail}"
+                    style="
+                        width:100%;
+                        max-width:500px;
+                        border-radius:12px;
+                        margin-top:15px;
+                    "
+                >
+            `;
+        }
+
+        html += `
+            <br>
+            <button onclick="downloadVideo('${encodeURIComponent(url)}')">
+                Videoyu İndir
+            </button>
+        `;
+
+        result.innerHTML = html;
+
+    } catch (error) {
+
+        result.innerHTML =
+            `<p class="error">${error}</p>`;
+    }
+}
+
+
+async function downloadVideo(encodedUrl) {
+
+    const url =
+        decodeURIComponent(encodedUrl);
+
+    const result =
+        document.getElementById("result");
+
+    result.innerHTML +=
+        "<p>İndirme başlatılıyor...</p>";
+
+    try {
+
+        const response =
+            await fetch("/api/download", {
+
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify({
+                    url: url
+                })
+            });
+
+        const data =
+            await response.json();
+
+        if (!data.success) {
+
+            result.innerHTML +=
+                `<p class="error">${data.error}</p>`;
+
+            return;
+        }
+
+        result.innerHTML += `
+            <p class="success">
+                İndirme tamamlandı.
+            </p>
+
+            <a
+                href="${data.download_url}"
+                style="color:#58a6ff"
+            >
+                Dosyayı İndir
+            </a>
+        `;
+
+    } catch (error) {
+
+        result.innerHTML +=
+            `<p class="error">${error}</p>`;
+    }
+}
+
+
+function escapeHtml(text) {
+
+    const div =
+        document.createElement("div");
+
+    div.textContent = text;
+
+    return div.innerHTML;
+}
+
+</script>
+
+</body>
+</html>
