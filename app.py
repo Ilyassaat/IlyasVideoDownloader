@@ -11,41 +11,42 @@ DOWNLOAD_DIR = os.path.join(BASE_DIR, "downloads")
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 
-def clean_filename(filename):
-    """
-    YouTube başlığını mümkün olduğunca aynı tutar.
-    Sadece işletim sisteminde kullanılamayan karakterleri kaldırır.
-    """
+def clean_filename(name):
+    name = re.sub(r'[<>:"/\\|?*]', '', name)
+    name = re.sub(r'\s+', ' ', name)
+    name = name.strip().rstrip('.')
 
-    filename = re.sub(r'[<>:"/\\|?*]', '', filename)
-    filename = filename.strip().rstrip(". ")
+    if not name:
+        name = "video"
 
-    if not filename:
-        filename = "video"
-
-    return filename
+    return name
 
 
-def ytdlp_base_options():
-    """
-    Tüm yt-dlp işlemlerinde ortak ayarlar.
-    BGUtil POT provider localhost:4416 üzerinden çalışır.
-    """
-
+def ytdlp_options():
     return {
         "quiet": True,
         "no_warnings": False,
         "noplaylist": True,
 
+        # YouTube için daha güncel istemci tercihleri
         "extractor_args": {
-            "youtubepot-bgutilhttp": {
-                "base_url": "http://127.0.0.1:4416"
+            "youtube": {
+                "player_client": [
+                    "web",
+                    "mweb"
+                ]
             }
         },
 
-        "js_runtimes": {
-            "node": {}
-        }
+        "http_headers": {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 "
+                "(KHTML, like Gecko) "
+                "Chrome/151.0.0.0 Safari/537.36"
+            ),
+            "Accept-Language": "en-US,en;q=0.9",
+        },
     }
 
 
@@ -57,10 +58,10 @@ def home():
 @app.route("/api/health")
 def health():
     return jsonify({
-        "status": "ok",
-        "service": "Ilyas Downloader",
-        "yt_dlp": yt_dlp.version.__version__,
-        "pot_provider": "bgutil"
+        "success": True,
+        "service": "Ilyas AI Downloader",
+        "status": "online",
+        "yt_dlp": yt_dlp.version.__version__
     })
 
 
@@ -68,38 +69,30 @@ def health():
 def info():
 
     try:
-
         data = request.get_json(silent=True) or {}
-
         url = data.get("url", "").strip()
 
         if not url:
-
             return jsonify({
                 "success": False,
-                "error": "Video linki girilmedi."
+                "error": "YouTube bağlantısı girilmedi."
             }), 400
 
-        options = ytdlp_base_options()
-
-        options.update({
-            "skip_download": True
-        })
-
-        print("BİLGİ ALINIYOR:", url)
+        options = ytdlp_options()
+        options["skip_download"] = True
 
         with yt_dlp.YoutubeDL(options) as ydl:
-
-            video_info = ydl.extract_info(
+            video = ydl.extract_info(
                 url,
                 download=False
             )
 
         formats = []
 
-        for fmt in video_info.get("formats", []):
+        for fmt in video.get("formats", []):
 
             height = fmt.get("height")
+            width = fmt.get("width")
             ext = fmt.get("ext")
 
             if not height:
@@ -109,88 +102,75 @@ def info():
                 continue
 
             formats.append({
-
                 "format_id": fmt.get("format_id"),
-
                 "height": height,
-
-                "width": fmt.get("width"),
-
+                "width": width,
                 "ext": ext,
-
                 "fps": fmt.get("fps"),
-
                 "filesize": (
                     fmt.get("filesize")
                     or fmt.get("filesize_approx")
                 ),
-
                 "has_audio": (
                     fmt.get("acodec") not in [None, "none"]
                 )
             })
 
-        unique_formats = {}
+        # Çözünürlük bazında en iyi seçenekleri seç
+        unique = {}
 
         for fmt in formats:
 
-            key = (
-                fmt["height"],
-                fmt["ext"],
-                fmt["has_audio"]
-            )
+            height = fmt.get("height")
 
-            if key not in unique_formats:
+            if height not in unique:
+                unique[height] = fmt
+                continue
 
-                unique_formats[key] = fmt
+            current = unique[height]
 
-        formats = list(unique_formats.values())
+            if fmt.get("has_audio") and not current.get("has_audio"):
+                unique[height] = fmt
+
+        formats = list(unique.values())
 
         formats.sort(
-            key=lambda x: (
-                x.get("height") or 0,
-                x.get("fps") or 0
-            ),
+            key=lambda x: x.get("height") or 0,
             reverse=True
         )
 
         return jsonify({
-
             "success": True,
-
-            "title": video_info.get(
-                "title",
-                "Video"
-            ),
-
-            "thumbnail": video_info.get(
-                "thumbnail"
-            ),
-
-            "duration": video_info.get(
-                "duration"
-            ),
-
-            "uploader": video_info.get(
-                "uploader"
-            ),
-
+            "title": video.get("title") or "Video",
+            "thumbnail": video.get("thumbnail"),
+            "duration": video.get("duration"),
+            "uploader": video.get("uploader"),
             "formats": formats
         })
 
     except Exception as e:
 
-        print(
-            "INFO HATASI:",
-            repr(e)
-        )
+        error = str(e)
+
+        print("INFO HATASI:", error)
+
+        if "Sign in to confirm" in error:
+            message = (
+                "YouTube bu sunucu bağlantısını bot olarak algıladı. "
+                "Sunucu çalışıyor ancak YouTube erişimi engellendi."
+            )
+        elif "429" in error:
+            message = (
+                "YouTube çok fazla istek nedeniyle geçici olarak "
+                "erişimi sınırladı."
+            )
+        else:
+            message = error
 
         return jsonify({
-
             "success": False,
-
-            "error": str(e)
-
+            "error": message,
+            "technical_error": error
         }), 500
 
 
@@ -199,108 +179,46 @@ def download():
 
     try:
 
-        data = request.get_json(
-            silent=True
-        ) or {}
+        data = request.get_json(silent=True) or {}
 
-        url = data.get(
-            "url",
-            ""
-        ).strip()
-
-        format_id = data.get(
-            "format_id"
-        )
+        url = data.get("url", "").strip()
+        format_id = data.get("format_id")
 
         if not url:
-
             return jsonify({
-
                 "success": False,
-
-                "error": "Video linki girilmedi."
-
+                "error": "Video bağlantısı girilmedi."
             }), 400
 
-        # -------------------------------------------------
-        # 1. VIDEO BILGISI
-        # -------------------------------------------------
+        # Önce bilgileri al
+        info_options = ytdlp_options()
 
-        info_options = ytdlp_base_options()
-
-        print(
-            "VIDEO BILGISI ALINIYOR:",
-            url
-        )
-
-        with yt_dlp.YoutubeDL(
-            info_options
-        ) as ydl:
-
-            video_info = ydl.extract_info(
+        with yt_dlp.YoutubeDL(info_options) as ydl:
+            video = ydl.extract_info(
                 url,
                 download=False
             )
 
-        # -------------------------------------------------
-        # 2. VIDEO BASLIGI
-        # -------------------------------------------------
+        # ORİJİNAL YOUTUBE BAŞLIĞI
+        original_title = video.get("title") or "video"
 
-        original_title = (
-            video_info.get("title")
-            or "video"
-        )
-
-        title = clean_filename(
-            original_title
-        )
-
-        print(
-            "VIDEO BASLIGI:",
-            title
-        )
-
-        # -------------------------------------------------
-        # 3. DOSYA ADI
-        # -------------------------------------------------
+        # Sadece işletim sistemi için yasak karakterleri temizle
+        title = clean_filename(original_title)
 
         output_template = os.path.join(
-
             DOWNLOAD_DIR,
-
             title + ".%(ext)s"
         )
 
-        # -------------------------------------------------
-        # 4. DOWNLOAD AYARLARI
-        # -------------------------------------------------
-
-        options = ytdlp_base_options()
+        options = ytdlp_options()
 
         options.update({
-
             "outtmpl": output_template,
-
             "windowsfilenames": True,
-
             "restrictfilenames": False,
-
             "overwrites": False,
-
             "merge_output_format": "mp4",
-
-            "quiet": False,
-
-            "continuedl": True,
-
-            "retries": 10,
-
-            "fragment_retries": 10
         })
-
-        # -------------------------------------------------
-        # 5. FORMAT
-        # -------------------------------------------------
 
         if format_id:
 
@@ -314,140 +232,72 @@ def download():
         else:
 
             options["format"] = (
-                "bestvideo+bestaudio/"
-                "best"
+                "bestvideo+bestaudio/best"
             )
 
-        # -------------------------------------------------
-        # 6. DOWNLOAD
-        # -------------------------------------------------
+        print("İNDİRİLİYOR:", original_title)
 
-        print(
-            "INDIRILIYOR:",
-            title
-        )
+        with yt_dlp.YoutubeDL(options) as ydl:
+            ydl.download([url])
 
-        with yt_dlp.YoutubeDL(
-            options
-        ) as ydl:
-
-            ydl.extract_info(
-                url,
-                download=True
-            )
-
-        # -------------------------------------------------
-        # 7. DOSYAYI BUL
-        # -------------------------------------------------
-
+        # Dosyayı bul
         final_file = None
 
-        possible_extensions = [
+        for filename in os.listdir(DOWNLOAD_DIR):
 
-            ".mp4",
-
-            ".webm",
-
-            ".mkv",
-
-            ".mov"
-        ]
-
-        for ext in possible_extensions:
-
-            test_file = os.path.join(
-
+            full_path = os.path.join(
                 DOWNLOAD_DIR,
-
-                title + ext
+                filename
             )
 
-            if os.path.exists(
-                test_file
-            ):
+            if not os.path.isfile(full_path):
+                continue
 
-                final_file = test_file
+            name_without_ext = os.path.splitext(
+                filename
+            )[0]
 
+            if name_without_ext == title:
+                final_file = filename
                 break
-
-        # -------------------------------------------------
-        # 8. SON KONTROL
-        # -------------------------------------------------
-
-        if not final_file:
-
-            for filename in os.listdir(
-                DOWNLOAD_DIR
-            ):
-
-                full_path = os.path.join(
-
-                    DOWNLOAD_DIR,
-
-                    filename
-                )
-
-                if not os.path.isfile(
-                    full_path
-                ):
-
-                    continue
-
-                filename_without_ext = os.path.splitext(
-                    filename
-                )[0]
-
-                if filename_without_ext == title:
-
-                    final_file = full_path
-
-                    break
 
         if not final_file:
 
             return jsonify({
-
                 "success": False,
-
-                "error":
-                    "İndirilen dosya bulunamadı."
+                "error": "İndirme tamamlandı ancak dosya bulunamadı."
             }), 500
 
-        final_filename = os.path.basename(
-            final_file
-        )
-
-        print(
-            "INDIRME TAMAMLANDI:",
-            final_filename
-        )
+        print("TAMAMLANDI:", final_file)
 
         return jsonify({
-
             "success": True,
-
-            "title": title,
-
-            "filename": final_filename,
-
-            "download_url":
-                "/download/" +
-                final_filename
+            "title": original_title,
+            "filename": final_file,
+            "download_url": "/download/" + final_file
         })
 
     except Exception as e:
 
-        print(
-            "DOWNLOAD HATASI:",
-            repr(e)
-        )
+        error = str(e)
+
+        print("DOWNLOAD HATASI:", error)
+
+        if "Sign in to confirm" in error:
+            message = (
+                "YouTube sunucu bağlantısını bot olarak engelledi."
+            )
+        elif "429" in error:
+            message = (
+                "YouTube geçici olarak istekleri sınırladı."
+            )
+        else:
+            message = error
 
         return jsonify({
-
             "success": False,
-
-            "error": str(e)
-
+            "error": message,
+            "technical_error": error
         }), 500
 
 
@@ -455,59 +305,10 @@ def download():
 def download_file(filename):
 
     return send_from_directory(
-
         DOWNLOAD_DIR,
-
         filename,
-
         as_attachment=True
     )
-
-
-@app.route("/api/files")
-def list_files():
-
-    try:
-
-        files = []
-
-        for filename in os.listdir(
-            DOWNLOAD_DIR
-        ):
-
-            path = os.path.join(
-
-                DOWNLOAD_DIR,
-
-                filename
-            )
-
-            if os.path.isfile(path):
-
-                files.append({
-
-                    "filename": filename,
-
-                    "size":
-                        os.path.getsize(path)
-                })
-
-        return jsonify({
-
-            "success": True,
-
-            "files": files
-        })
-
-    except Exception as e:
-
-        return jsonify({
-
-            "success": False,
-
-            "error": str(e)
-
-        }), 500
 
 
 if __name__ == "__main__":
@@ -520,8 +321,6 @@ if __name__ == "__main__":
     )
 
     app.run(
-
         host="0.0.0.0",
-
         port=port
     )
