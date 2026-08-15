@@ -1,148 +1,83 @@
-from flask import Flask, request, jsonify, send_from_directory, send_file
+from flask import Flask, request, jsonify, send_from_directory
 import yt_dlp
 import os
 import uuid
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder=".")
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-DOWNLOAD_DIR = os.path.join(BASE_DIR, "downloads")
-
+DOWNLOAD_DIR = os.path.join(os.getcwd(), "downloads")
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-
-
-def base_options():
-    return {
-        "quiet": False,
-        "no_warnings": False,
-        "noplaylist": True,
-
-        # Render üzerinde bulunan Node.js kullanılır
-        "js_runtimes": {
-            "node": {}
-        },
-
-        # BGUTIL PO Token sağlayıcısı
-        "extractor_args": {
-            "youtube": {
-                "player_client": [
-                    "mweb",
-                    "web_safari",
-                    "tv"
-                ]
-            },
-            "youtubepot-bgutilhttp": {
-                "base_url": "http://127.0.0.1:4416"
-            }
-        },
-
-        # Daha stabil bağlantı
-        "retries": 5,
-        "fragment_retries": 5,
-        "socket_timeout": 30,
-
-        # IPv4 kullan
-        "source_address": "0.0.0.0",
-
-        # User-Agent
-        "http_headers": {
-            "User-Agent":
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 "
-                "(KHTML, like Gecko) "
-                "Chrome/151.0.0.0 Safari/537.36"
-        }
-    }
 
 
 @app.route("/")
 def home():
-    return send_from_directory(BASE_DIR, "index.html")
+    return send_from_directory(".", "index.html")
+
+
+@app.route("/api/health")
+def health():
+    return jsonify({
+        "status": "ok",
+        "service": "IlyasVideoDownloader"
+    })
 
 
 @app.route("/api/info", methods=["POST"])
-def video_info():
-
-    data = request.get_json()
-
-    if not data or not data.get("url"):
-        return jsonify({
-            "success": False,
-            "error": "Video URL bulunamadı."
-        }), 400
-
-    url = data["url"].strip()
-
+def info():
     try:
+        data = request.get_json()
+        url = data.get("url", "").strip()
 
-        options = base_options()
-        options["skip_download"] = True
+        if not url:
+            return jsonify({"error": "Video linki girilmedi."}), 400
+
+        options = {
+            "quiet": True,
+            "no_warnings": True,
+            "skip_download": True,
+            "noplaylist": True,
+        }
 
         with yt_dlp.YoutubeDL(options) as ydl:
+            info = ydl.extract_info(url, download=False)
 
-            info = ydl.extract_info(
-                url,
-                download=False
-            )
+        formats = []
 
-        formats = info.get("formats", [])
-
-        resolutions = set()
-
-        for fmt in formats:
-
-            height = fmt.get("height")
-
-            if not height:
+        for f in info.get("formats", []):
+            if not f.get("url"):
                 continue
 
-            if height >= 2160:
-                resolutions.add(2160)
+            height = f.get("height")
+            ext = f.get("ext")
 
-            elif height >= 1440:
-                resolutions.add(1440)
+            if height and ext in ["mp4", "webm"]:
+                formats.append({
+                    "format_id": f.get("format_id"),
+                    "height": height,
+                    "ext": ext,
+                    "filesize": f.get("filesize") or f.get("filesize_approx"),
+                    "fps": f.get("fps"),
+                    "url": f.get("url")
+                })
 
-            elif height >= 1080:
-                resolutions.add(1080)
-
-            elif height >= 720:
-                resolutions.add(720)
-
-            elif height >= 480:
-                resolutions.add(480)
-
-            elif height >= 360:
-                resolutions.add(360)
-
-        resolutions = sorted(
-            resolutions,
+        formats.sort(
+            key=lambda x: (
+                x.get("height") or 0,
+                x.get("fps") or 0
+            ),
             reverse=True
         )
 
         return jsonify({
-
             "success": True,
-
-            "title": info.get(
-                "title",
-                "Bilinmeyen video"
-            ),
-
-            "duration": info.get("duration"),
-
+            "title": info.get("title"),
             "thumbnail": info.get("thumbnail"),
-
-            "uploader": info.get("uploader"),
-
-            "resolutions": resolutions
-
+            "duration": info.get("duration"),
+            "formats": formats[:30]
         })
 
     except Exception as e:
-
         print("INFO HATASI:", str(e))
-
         return jsonify({
             "success": False,
             "error": str(e)
@@ -150,239 +85,84 @@ def video_info():
 
 
 @app.route("/api/download", methods=["POST"])
-def download_video():
-
-    data = request.get_json()
-
-    if not data or not data.get("url"):
-
-        return jsonify({
-            "success": False,
-            "error": "Video URL bulunamadı."
-        }), 400
-
-    url = data["url"].strip()
-
-    download_type = data.get(
-        "type",
-        "video"
-    )
-
-    quality = data.get(
-        "quality",
-        "best"
-    )
-
-    audio_quality = data.get(
-        "audio_quality",
-        "192"
-    )
-
-    file_id = str(uuid.uuid4())
-
-    output_template = os.path.join(
-        DOWNLOAD_DIR,
-        f"{file_id}.%(ext)s"
-    )
-
+def download():
     try:
+        data = request.get_json()
 
-        # =========================
-        # MP3
-        # =========================
+        url = data.get("url", "").strip()
+        format_id = data.get("format_id")
 
-        if download_type == "audio":
+        if not url:
+            return jsonify({"error": "Video linki girilmedi."}), 400
 
-            options = base_options()
+        file_id = str(uuid.uuid4())
 
-            options.update({
-
-                "format":
-                    "bestaudio/best",
-
-                "outtmpl":
-                    output_template,
-
-                "postprocessors": [
-                    {
-                        "key":
-                            "FFmpegExtractAudio",
-
-                        "preferredcodec":
-                            "mp3",
-
-                        "preferredquality":
-                            str(audio_quality)
-                    }
-                ]
-
-            })
-
-        # =========================
-        # MP4
-        # =========================
-
-        else:
-
-            if quality == "best":
-
-                video_format = (
-                    "bestvideo*+bestaudio/"
-                    "best"
-                )
-
-            else:
-
-                height = int(quality)
-
-                video_format = (
-                    f"bestvideo[height<={height}]"
-                    "+bestaudio/"
-                    f"best[height<={height}]"
-                )
-
-            options = base_options()
-
-            options.update({
-
-                "format":
-                    video_format,
-
-                "outtmpl":
-                    output_template,
-
-                "merge_output_format":
-                    "mp4"
-
-            })
-
-        print("====================================")
-        print("İNDİRME BAŞLIYOR")
-        print("URL:", url)
-        print("TYPE:", download_type)
-        print("QUALITY:", quality)
-        print("====================================")
-
-        with yt_dlp.YoutubeDL(options) as ydl:
-
-            info = ydl.extract_info(
-                url,
-                download=True
-            )
-
-        files = os.listdir(DOWNLOAD_DIR)
-
-        matching_files = [
-            file
-            for file in files
-            if file.startswith(file_id)
-        ]
-
-        if not matching_files:
-
-            raise Exception(
-                "İndirilen dosya bulunamadı."
-            )
-
-        filename = matching_files[0]
-
-        print(
-            "İNDİRME TAMAMLANDI:",
-            filename
+        output = os.path.join(
+            DOWNLOAD_DIR,
+            file_id + ".%(ext)s"
         )
 
+        options = {
+            "outtmpl": output,
+            "quiet": False,
+            "noplaylist": True,
+        }
+
+        if format_id:
+            options["format"] = f"{format_id}+bestaudio/best"
+        else:
+            options["format"] = "bestvideo+bestaudio/best"
+
+        options["merge_output_format"] = "mp4"
+
+        with yt_dlp.YoutubeDL(options) as ydl:
+            info = ydl.extract_info(url, download=True)
+
+        filename = None
+
+        for ext in ["mp4", "webm", "mkv"]:
+            test = os.path.join(
+                DOWNLOAD_DIR,
+                file_id + "." + ext
+            )
+
+            if os.path.exists(test):
+                filename = os.path.basename(test)
+                break
+
+        if not filename:
+            return jsonify({
+                "success": False,
+                "error": "Dosya oluşturulamadı."
+            }), 500
+
         return jsonify({
-
             "success": True,
-
-            "title": info.get(
-                "title",
-                "Video"
-            ),
-
             "filename": filename,
-
-            "download_url":
-                "/api/file/" + filename
-
+            "title": info.get("title")
         })
 
     except Exception as e:
-
-        print(
-            "DOWNLOAD HATASI:",
-            str(e)
-        )
+        print("DOWNLOAD HATASI:", str(e))
 
         return jsonify({
-
             "success": False,
-
             "error": str(e)
-
         }), 500
 
 
-@app.route("/api/file/<filename>")
-def serve_file(filename):
-
-    safe_filename = os.path.basename(
-        filename
-    )
-
-    file_path = os.path.join(
+@app.route("/download/<filename>")
+def download_file(filename):
+    return send_from_directory(
         DOWNLOAD_DIR,
-        safe_filename
-    )
-
-    if not os.path.exists(file_path):
-
-        return jsonify({
-
-            "success": False,
-
-            "error":
-                "Dosya bulunamadı."
-
-        }), 404
-
-    return send_file(
-        file_path,
+        filename,
         as_attachment=True
     )
 
 
-@app.route("/api/status")
-def status():
-
-    return jsonify({
-
-        "service":
-            "Ilyas Downloader",
-
-        "status":
-            "ok",
-
-        "yt_dlp":
-            yt_dlp.version.__version__,
-
-        "bgutil":
-            "enabled",
-
-        "node":
-            "enabled"
-
-    })
-
-
 if __name__ == "__main__":
-
+    port = int(os.environ.get("PORT", 5000))
     app.run(
         host="0.0.0.0",
-        port=int(
-            os.environ.get(
-                "PORT",
-                5000
-            )
-        )
+        port=port
     )
