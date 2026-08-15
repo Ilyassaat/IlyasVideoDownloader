@@ -13,14 +13,40 @@ os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 def clean_filename(filename):
     """
-    Windows için dosya adını güvenli hale getirir.
-    Video başlığını mümkün olduğunca değiştirmez.
+    YouTube başlığını mümkün olduğunca aynen korur.
+    Sadece Windows'ta yasak olan karakterleri temizler.
     """
-    filename = re.sub(r'[<>:"/\\|?*]', '', filename)
-    filename = filename.strip().rstrip(". ")
 
     if not filename:
         filename = "video"
+
+    # Windows yasak karakterleri
+    filename = re.sub(r'[<>:"/\\|?*]', '', filename)
+
+    # Kontrol karakterlerini temizle
+    filename = re.sub(r'[\x00-\x1f\x80-\x9f]', '', filename)
+
+    # Başındaki/sonundaki boşluk ve noktaları temizle
+    filename = filename.strip().rstrip(". ")
+
+    # Windows özel isimleri
+    reserved = {
+        "CON", "PRN", "AUX", "NUL",
+        "COM1", "COM2", "COM3", "COM4", "COM5",
+        "COM6", "COM7", "COM8", "COM9",
+        "LPT1", "LPT2", "LPT3", "LPT4", "LPT5",
+        "LPT6", "LPT7", "LPT8", "LPT9"
+    }
+
+    if filename.upper() in reserved:
+        filename = "_" + filename
+
+    if not filename:
+        filename = "video"
+
+    # Windows maksimum yol sorunlarını azalt
+    if len(filename) > 180:
+        filename = filename[:180].rstrip(". ")
 
     return filename
 
@@ -92,8 +118,8 @@ def info():
                 )
             })
 
-        # Aynı çözünürlükleri mümkün olduğunca tekilleştir
         unique_formats = {}
+
         for fmt in formats:
             key = (
                 fmt["height"],
@@ -146,7 +172,10 @@ def download():
                 "error": "Video linki girilmedi."
             }), 400
 
-        # Önce videonun bilgilerini alıyoruz.
+        # =========================================================
+        # 1. VIDEO BİLGİLERİNİ AL
+        # =========================================================
+
         info_options = {
             "quiet": True,
             "no_warnings": True,
@@ -159,29 +188,59 @@ def download():
                 download=False
             )
 
-        title = video_info.get("title") or "video"
-        title = clean_filename(title)
+        # =========================================================
+        # 2. ORİJİNAL YOUTUBE BAŞLIĞINI AL
+        # =========================================================
 
-        # YouTube başlığı dosya adı olarak kullanılacak.
-        output_template = os.path.join(
+        original_title = video_info.get("title") or "video"
+
+        # Dosya adı için güvenli hale getir
+        final_title = clean_filename(original_title)
+
+        print("----------------------------------------")
+        print("YOUTUBE BAŞLIĞI :", original_title)
+        print("DOSYA ADI       :", final_title)
+        print("----------------------------------------")
+
+        # =========================================================
+        # 3. GEÇİCİ İNDİRME DOSYASI
+        # =========================================================
+
+        temp_template = os.path.join(
             DOWNLOAD_DIR,
-            title + ".%(ext)s"
+            "__ILYAS_TEMP_%(id)s.%(ext)s"
         )
 
         options = {
-            "outtmpl": output_template,
+            "outtmpl": temp_template,
+
             "noplaylist": True,
+
             "quiet": False,
-            "windowsfilenames": True,
+
+            # Windows karakterlerini yt-dlp'nin değiştirmesine izin verme
+            "windowsfilenames": False,
+
+            # Dosya adını kısaltma
             "restrictfilenames": False,
+
+            # Var olan dosyanın üzerine yazma
             "overwrites": False,
+
+            # Video + ses birleşince MP4
+            "merge_output_format": "mp4",
         }
 
-        # Kullanıcının seçtiği kalite.
+        # =========================================================
+        # 4. FORMAT
+        # =========================================================
+
         if format_id:
             options["format"] = (
                 f"{format_id}+bestaudio/"
-                f"{format_id}/bestvideo+bestaudio/best"
+                f"{format_id}/"
+                f"bestvideo+bestaudio/"
+                f"best"
             )
         else:
             options["format"] = (
@@ -189,10 +248,11 @@ def download():
                 "best"
             )
 
-        # Video + ses birleşince MP4.
-        options["merge_output_format"] = "mp4"
+        # =========================================================
+        # 5. İNDİR
+        # =========================================================
 
-        print("İNDİRİLİYOR:", title)
+        print("İNDİRİLİYOR...")
 
         with yt_dlp.YoutubeDL(options) as ydl:
             downloaded_info = ydl.extract_info(
@@ -200,64 +260,123 @@ def download():
                 download=True
             )
 
-        # Olası dosya isimlerini kontrol et.
-        possible_extensions = [
-            ".mp4",
-            ".webm",
-            ".mkv",
-            ".mov"
-        ]
+        print("İNDİRME BİTTİ.")
 
-        final_file = None
+        # =========================================================
+        # 6. GEÇİCİ DOSYAYI BUL
+        # =========================================================
 
-        for ext in possible_extensions:
-            test_file = os.path.join(
-                DOWNLOAD_DIR,
-                title + ext
-            )
+        video_id = downloaded_info.get("id")
 
-            if os.path.exists(test_file):
-                final_file = test_file
-                break
+        possible_files = []
 
-        # Dosya bulunamadıysa klasörde başlıkla eşleşen dosyayı ara.
-        if not final_file:
-            for filename in os.listdir(DOWNLOAD_DIR):
+        for filename in os.listdir(DOWNLOAD_DIR):
+
+            if filename.startswith("__ILYAS_TEMP_"):
 
                 full_path = os.path.join(
                     DOWNLOAD_DIR,
                     filename
                 )
 
-                if not os.path.isfile(full_path):
-                    continue
+                if os.path.isfile(full_path):
+                    possible_files.append(full_path)
 
-                filename_without_ext = os.path.splitext(
-                    filename
-                )[0]
-
-                if filename_without_ext == title:
-                    final_file = full_path
-                    break
-
-        if not final_file:
+        if not possible_files:
             return jsonify({
                 "success": False,
-                "error": "İndirilen dosya bulunamadı."
+                "error": "İndirilen geçici dosya bulunamadı."
             }), 500
 
-        final_filename = os.path.basename(final_file)
+        # En son oluşturulan dosyayı seç
+        source_file = max(
+            possible_files,
+            key=os.path.getmtime
+        )
 
-        print("İNDİRME TAMAMLANDI:", final_filename)
+        source_ext = os.path.splitext(
+            source_file
+        )[1]
+
+        # =========================================================
+        # 7. SON DOSYA ADINI OLUŞTUR
+        # =========================================================
+
+        # Video + ses birleşmişse MP4
+        if source_ext.lower() in [".webm", ".mkv"]:
+
+            # yt-dlp MP4 oluşturduysa MP4 kullan
+            mp4_candidate = os.path.splitext(
+                source_file
+            )[0] + ".mp4"
+
+            if os.path.exists(mp4_candidate):
+                source_file = mp4_candidate
+                source_ext = ".mp4"
+
+        final_filename = final_title + source_ext.lower()
+
+        final_file = os.path.join(
+            DOWNLOAD_DIR,
+            final_filename
+        )
+
+        # =========================================================
+        # 8. DOSYA ADINI ORİJİNAL BAŞLIĞA ÇEVİR
+        # =========================================================
+
+        # Aynı isim varsa numara ekle
+        # Böylece eski dosyanın üzerine yazılmaz.
+
+        if os.path.exists(final_file):
+
+            base_name = final_title
+            extension = source_ext.lower()
+
+            counter = 2
+
+            while True:
+
+                candidate_name = (
+                    f"{base_name} ({counter}){extension}"
+                )
+
+                candidate_path = os.path.join(
+                    DOWNLOAD_DIR,
+                    candidate_name
+                )
+
+                if not os.path.exists(candidate_path):
+
+                    final_filename = candidate_name
+                    final_file = candidate_path
+
+                    break
+
+                counter += 1
+
+        # =========================================================
+        # 9. GEÇİCİ DOSYAYI YENİDEN ADLANDIR
+        # =========================================================
+
+        os.rename(
+            source_file,
+            final_file
+        )
+
+        print("----------------------------------------")
+        print("SON DOSYA :", final_filename)
+        print("----------------------------------------")
 
         return jsonify({
             "success": True,
-            "title": title,
+            "title": original_title,
             "filename": final_filename,
             "download_url": "/download/" + final_filename
         })
 
     except Exception as e:
+
         print("DOWNLOAD HATASI:", str(e))
 
         return jsonify({
@@ -268,6 +387,7 @@ def download():
 
 @app.route("/download/<path:filename>")
 def download_file(filename):
+
     return send_from_directory(
         DOWNLOAD_DIR,
         filename,
@@ -277,16 +397,20 @@ def download_file(filename):
 
 @app.route("/api/files")
 def list_files():
+
     try:
+
         files = []
 
         for filename in os.listdir(DOWNLOAD_DIR):
+
             path = os.path.join(
                 DOWNLOAD_DIR,
                 filename
             )
 
             if os.path.isfile(path):
+
                 files.append({
                     "filename": filename,
                     "size": os.path.getsize(path)
@@ -298,6 +422,7 @@ def list_files():
         })
 
     except Exception as e:
+
         return jsonify({
             "success": False,
             "error": str(e)
@@ -305,6 +430,7 @@ def list_files():
 
 
 if __name__ == "__main__":
+
     port = int(
         os.environ.get(
             "PORT",
