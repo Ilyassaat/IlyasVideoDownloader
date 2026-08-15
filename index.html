@@ -4,78 +4,301 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Ilyas Video Downloader</title>
+    <title>İlyas AI Downloader</title>
 
     <style>
-        body {
+        * {
+            box-sizing: border-box;
             margin: 0;
-            font-family: Arial, sans-serif;
-            background: #0d1117;
-            color: white;
+            padding: 0;
+        }
+
+        body {
             min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            font-family: Arial, Helvetica, sans-serif;
+            background:
+                radial-gradient(circle at top left, #202a44 0%, transparent 35%),
+                radial-gradient(circle at bottom right, #172033 0%, transparent 40%),
+                #080b12;
+            color: #ffffff;
         }
 
         .container {
-            width: 90%;
-            max-width: 800px;
+            width: min(1100px, 94%);
+            margin: auto;
+            padding: 50px 0;
+        }
+
+        .header {
             text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .logo {
+            width: 72px;
+            height: 72px;
+            margin: 0 auto 18px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #6c63ff, #00c6ff);
+            box-shadow: 0 15px 45px rgba(0, 198, 255, .25);
         }
 
         h1 {
             font-size: 42px;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
         }
 
-        p {
-            color: #8b949e;
+        .subtitle {
+            color: #9ca8bb;
+            font-size: 17px;
         }
 
-        .box {
-            margin-top: 30px;
-            background: #161b22;
-            padding: 30px;
-            border-radius: 16px;
+        .card {
+            background: rgba(18, 23, 35, .88);
+            border: 1px solid rgba(255,255,255,.08);
+            border-radius: 24px;
+            padding: 28px;
+            box-shadow: 0 25px 70px rgba(0,0,0,.35);
+            backdrop-filter: blur(18px);
+        }
+
+        .input-row {
+            display: flex;
+            gap: 12px;
         }
 
         input {
-            width: 100%;
-            box-sizing: border-box;
-            padding: 16px;
-            border-radius: 10px;
-            border: 1px solid #30363d;
-            background: #0d1117;
+            flex: 1;
+            height: 58px;
+            border-radius: 15px;
+            border: 1px solid #30394d;
+            background: #0c111b;
             color: white;
+            padding: 0 18px;
             font-size: 16px;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: #6571ff;
+            box-shadow: 0 0 0 3px rgba(101,113,255,.12);
         }
 
         button {
-            margin-top: 15px;
-            padding: 14px 25px;
             border: none;
-            border-radius: 10px;
-            background: #238636;
-            color: white;
-            font-size: 16px;
             cursor: pointer;
+            border-radius: 15px;
+            color: white;
+            font-weight: 700;
+            transition: .2s;
         }
 
         button:hover {
-            background: #2ea043;
+            transform: translateY(-2px);
         }
 
-        #result {
-            margin-top: 25px;
+        .analyze-btn {
+            min-width: 180px;
+            background: linear-gradient(135deg, #665cff, #008cff);
+            font-size: 16px;
+        }
+
+        .status {
+            margin-top: 18px;
+            padding: 14px;
+            border-radius: 12px;
+            background: rgba(255,255,255,.04);
+            color: #aeb8c9;
+            display: none;
         }
 
         .error {
-            color: #ff7b72;
+            margin-top: 18px;
+            padding: 15px;
+            border-radius: 12px;
+            background: rgba(255, 70, 70, .1);
+            border: 1px solid rgba(255, 70, 70, .2);
+            color: #ff8c8c;
+            display: none;
         }
 
-        .success {
-            color: #3fb950;
+        .result {
+            margin-top: 28px;
+            display: none;
+        }
+
+        .video-info {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 25px;
+        }
+
+        .thumbnail {
+            width: 100%;
+            aspect-ratio: 16/9;
+            object-fit: cover;
+            border-radius: 16px;
+            background: #0b0f18;
+        }
+
+        .video-title {
+            font-size: 25px;
+            line-height: 1.3;
+            margin-bottom: 15px;
+        }
+
+        .meta {
+            color: #9ca8bb;
+            margin-bottom: 25px;
+            line-height: 1.8;
+        }
+
+        .section-title {
+            margin: 28px 0 14px;
+            font-size: 18px;
+        }
+
+        .quality-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 10px;
+        }
+
+        .quality {
+            padding: 14px;
+            background: #0c111b;
+            border: 1px solid #293246;
+            color: #cbd5e1;
+        }
+
+        .quality.active {
+            border-color: #6571ff;
+            background: rgba(101,113,255,.14);
+            color: white;
+        }
+
+        .download-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 25px;
+        }
+
+        .download-video {
+            height: 54px;
+            background: linear-gradient(135deg, #665cff, #008cff);
+        }
+
+        .download-mp3 {
+            height: 54px;
+            background: linear-gradient(135deg, #00a878, #00c98b);
+        }
+
+        .download-link {
+            display: none;
+            margin-top: 18px;
+            text-align: center;
+            padding: 15px;
+            border-radius: 12px;
+            background: rgba(0, 200, 130, .1);
+            border: 1px solid rgba(0, 200, 130, .2);
+        }
+
+        .download-link a {
+            color: #52e0ae;
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        .features {
+            margin-top: 35px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+        }
+
+        .feature {
+            padding: 20px;
+            background: rgba(255,255,255,.035);
+            border: 1px solid rgba(255,255,255,.06);
+            border-radius: 16px;
+        }
+
+        .feature-icon {
+            font-size: 25px;
+            margin-bottom: 10px;
+        }
+
+        .feature h3 {
+            margin-bottom: 7px;
+        }
+
+        .feature p {
+            color: #8995a8;
+            line-height: 1.5;
+            font-size: 14px;
+        }
+
+        .footer {
+            text-align: center;
+            color: #667085;
+            margin-top: 35px;
+            font-size: 13px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 17px;
+            height: 17px;
+            border: 2px solid rgba(255,255,255,.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin .7s linear infinite;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (max-width: 750px) {
+
+            .container {
+                padding: 25px 0;
+            }
+
+            h1 {
+                font-size: 31px;
+            }
+
+            .input-row {
+                flex-direction: column;
+            }
+
+            .analyze-btn {
+                width: 100%;
+                height: 55px;
+            }
+
+            .video-info {
+                grid-template-columns: 1fr;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+            }
+
+            .download-buttons {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -84,24 +307,183 @@
 
 <div class="container">
 
-    <h1>İlyas Video Downloader</h1>
+    <div class="header">
 
-    <p>YouTube videolarını indir</p>
+        <div class="logo">
+            IA
+        </div>
 
-    <div class="box">
+        <h1>İlyas AI Downloader</h1>
 
-        <input
-            id="url"
-            type="text"
-            placeholder="YouTube video linkini buraya yapıştır"
+        <div class="subtitle">
+            Videolarını hızlı ve kolay şekilde analiz et
+        </div>
+
+    </div>
+
+
+    <div class="card">
+
+        <div class="input-row">
+
+            <input
+                id="urlInput"
+                type="text"
+                placeholder="YouTube video bağlantısını buraya yapıştır..."
+                autocomplete="off"
+            >
+
+            <button
+                class="analyze-btn"
+                id="analyzeBtn"
+                onclick="analyzeVideo()"
+            >
+                🔍 Analiz Et
+            </button>
+
+        </div>
+
+
+        <div
+            class="status"
+            id="status"
+        ></div>
+
+
+        <div
+            class="error"
+            id="error"
+        ></div>
+
+
+        <div
+            class="result"
+            id="result"
         >
 
-        <button onclick="getInfo()">
-            Video Bilgilerini Getir
-        </button>
+            <div class="video-info">
 
-        <div id="result"></div>
+                <img
+                    id="thumbnail"
+                    class="thumbnail"
+                    src=""
+                    alt="Video thumbnail"
+                >
 
+                <div>
+
+                    <div
+                        class="video-title"
+                        id="videoTitle"
+                    >
+                    </div>
+
+                    <div
+                        class="meta"
+                        id="videoMeta"
+                    >
+                    </div>
+
+                    <div class="section-title">
+                        🎬 Video Kalitesi
+                    </div>
+
+                    <div
+                        class="quality-grid"
+                        id="qualityGrid"
+                    >
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="section-title">
+                📥 İndirme
+            </div>
+
+            <div class="download-buttons">
+
+                <button
+                    class="download-video"
+                    onclick="downloadVideo()"
+                >
+                    🎬 MP4 İndir
+                </button>
+
+                <button
+                    class="download-mp3"
+                    onclick="downloadMP3()"
+                >
+                    🎵 MP3 İndir
+                </button>
+
+            </div>
+
+
+            <div
+                class="download-link"
+                id="downloadLink"
+            >
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="features">
+
+        <div class="feature">
+
+            <div class="feature-icon">
+                🤖
+            </div>
+
+            <h3>AI Destekli</h3>
+
+            <p>
+                Video bilgilerini otomatik olarak analiz eder.
+            </p>
+
+        </div>
+
+
+        <div class="feature">
+
+            <div class="feature-icon">
+                ⚡
+            </div>
+
+            <h3>Hızlı</h3>
+
+            <p>
+                Kullanımı kolay ve sade bir indirme sistemi.
+            </p>
+
+        </div>
+
+
+        <div class="feature">
+
+            <div class="feature-icon">
+                📁
+            </div>
+
+            <h3>Dosya Adı Koruma</h3>
+
+            <p>
+                Video başlığı mümkün olduğunca korunarak kaydedilir.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div class="footer">
+        İlyas AI Downloader © 2026
     </div>
 
 </div>
@@ -109,160 +491,422 @@
 
 <script>
 
-async function getInfo() {
+let currentVideo = null;
+let selectedFormat = null;
 
-    const url = document
-        .getElementById("url")
+
+function showStatus(message) {
+
+    const status = document.getElementById("status");
+
+    status.style.display = "block";
+
+    status.innerHTML =
+        '<span class="loading"></span>' + message;
+}
+
+
+function hideStatus() {
+
+    document.getElementById("status").style.display =
+        "none";
+}
+
+
+function showError(message) {
+
+    const error = document.getElementById("error");
+
+    error.style.display = "block";
+
+    error.innerText = message;
+}
+
+
+function hideError() {
+
+    document.getElementById("error").style.display =
+        "none";
+}
+
+
+function formatDuration(seconds) {
+
+    if (!seconds) {
+        return "Bilinmiyor";
+    }
+
+    seconds = Number(seconds);
+
+    const h = Math.floor(seconds / 3600);
+
+    const m = Math.floor(
+        (seconds % 3600) / 60
+    );
+
+    const s = Math.floor(
+        seconds % 60
+    );
+
+    if (h > 0) {
+
+        return (
+            String(h).padStart(2, "0") +
+            ":" +
+            String(m).padStart(2, "0") +
+            ":" +
+            String(s).padStart(2, "0")
+        );
+
+    }
+
+    return (
+        String(m).padStart(2, "0") +
+        ":" +
+        String(s).padStart(2, "0")
+    );
+}
+
+
+async function analyzeVideo() {
+
+    const url =
+        document.getElementById("urlInput")
         .value
         .trim();
 
-    const result =
-        document.getElementById("result");
+    hideError();
+
+    document.getElementById("result")
+        .style.display = "none";
 
     if (!url) {
 
-        result.innerHTML =
-            '<p class="error">Link gir.</p>';
+        showError(
+            "Lütfen bir YouTube bağlantısı gir."
+        );
 
         return;
     }
 
-    result.innerHTML =
-        "<p>Video bilgileri alınıyor...</p>";
+    showStatus(
+        "Video analiz ediliyor..."
+    );
+
+    const button =
+        document.getElementById("analyzeBtn");
+
+    button.disabled = true;
 
     try {
 
-        const response =
-            await fetch("/api/info", {
-
+        const response = await fetch(
+            "/api/info",
+            {
                 method: "POST",
 
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type":
+                        "application/json"
                 },
 
                 body: JSON.stringify({
                     url: url
                 })
-            });
+            }
+        );
+
 
         const data =
             await response.json();
 
+
         if (!data.success) {
 
-            result.innerHTML =
-                `<p class="error">${data.error}</p>`;
-
-            return;
+            throw new Error(
+                data.error ||
+                "Video analiz edilemedi."
+            );
         }
 
-        let html = "";
 
-        html += `
-            <h2>${escapeHtml(data.title)}</h2>
-        `;
+        currentVideo = {
+            url: url,
+            ...data
+        };
 
-        if (data.thumbnail) {
 
-            html += `
-                <img
-                    src="${data.thumbnail}"
-                    style="
-                        width:100%;
-                        max-width:500px;
-                        border-radius:12px;
-                        margin-top:15px;
-                    "
-                >
-            `;
-        }
+        displayVideo(data);
 
-        html += `
-            <br>
-            <button onclick="downloadVideo('${encodeURIComponent(url)}')">
-                Videoyu İndir
-            </button>
-        `;
+        hideStatus();
 
-        result.innerHTML = html;
+    }
 
-    } catch (error) {
+    catch (error) {
 
-        result.innerHTML =
-            `<p class="error">${error}</p>`;
+        hideStatus();
+
+        showError(
+            error.message
+        );
+
+    }
+
+    finally {
+
+        button.disabled = false;
+
     }
 }
 
 
-async function downloadVideo(encodedUrl) {
+function displayVideo(data) {
 
-    const url =
-        decodeURIComponent(encodedUrl);
+    document.getElementById("result")
+        .style.display = "block";
 
-    const result =
-        document.getElementById("result");
 
-    result.innerHTML +=
-        "<p>İndirme başlatılıyor...</p>";
+    document.getElementById("videoTitle")
+        .innerText =
+            data.title || "Video";
+
+
+    document.getElementById("thumbnail")
+        .src =
+            data.thumbnail || "";
+
+
+    document.getElementById("videoMeta")
+        .innerHTML =
+            "👤 " +
+            (data.uploader || "Bilinmiyor") +
+            "<br>" +
+            "⏱️ " +
+            formatDuration(data.duration);
+
+
+    const grid =
+        document.getElementById(
+            "qualityGrid"
+        );
+
+    grid.innerHTML = "";
+
+
+    const formats =
+        data.formats || [];
+
+
+    if (!formats.length) {
+
+        grid.innerHTML =
+            "<div>Kalite bilgisi bulunamadı.</div>";
+
+        selectedFormat = null;
+
+        return;
+    }
+
+
+    formats.forEach(
+        (format, index) => {
+
+            const button =
+                document.createElement(
+                    "button"
+                );
+
+
+            button.className =
+                "quality";
+
+
+            button.innerText =
+                format.height +
+                "p" +
+                (
+                    format.fps
+                    ? " " +
+                      format.fps +
+                      "fps"
+                    : ""
+                );
+
+
+            button.onclick =
+                function() {
+
+                    document
+                        .querySelectorAll(
+                            ".quality"
+                        )
+                        .forEach(
+                            b =>
+                                b.classList
+                                .remove(
+                                    "active"
+                                )
+                        );
+
+
+                    button.classList.add(
+                        "active"
+                    );
+
+
+                    selectedFormat =
+                        format;
+                };
+
+
+            grid.appendChild(button);
+
+
+            if (index === 0) {
+
+                button.classList.add(
+                    "active"
+                );
+
+                selectedFormat =
+                    format;
+
+            }
+
+        }
+    );
+}
+
+
+async function downloadVideo() {
+
+    if (!currentVideo) {
+
+        showError(
+            "Önce videoyu analiz et."
+        );
+
+        return;
+    }
+
+
+    showStatus(
+        "Video indiriliyor..."
+    );
+
+    hideError();
+
 
     try {
 
         const response =
-            await fetch("/api/download", {
+            await fetch(
+                "/api/download",
+                {
+                    method: "POST",
 
-                method: "POST",
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
 
-                headers: {
-                    "Content-Type": "application/json"
-                },
+                    body: JSON.stringify({
 
-                body: JSON.stringify({
-                    url: url
-                })
-            });
+                        url:
+                            currentVideo.url,
+
+                        format_id:
+                            selectedFormat
+                            ? selectedFormat.format_id
+                            : null
+
+                    })
+                }
+            );
+
 
         const data =
             await response.json();
 
+
         if (!data.success) {
 
-            result.innerHTML +=
-                `<p class="error">${data.error}</p>`;
-
-            return;
+            throw new Error(
+                data.error ||
+                "İndirme başarısız."
+            );
         }
 
-        result.innerHTML += `
-            <p class="success">
-                İndirme tamamlandı.
-            </p>
 
-            <a
-                href="${data.download_url}"
-                style="color:#58a6ff"
-            >
-                Dosyayı İndir
-            </a>
-        `;
+        hideStatus();
 
-    } catch (error) {
 
-        result.innerHTML +=
-            `<p class="error">${error}</p>`;
+        const box =
+            document.getElementById(
+                "downloadLink"
+            );
+
+
+        box.style.display =
+            "block";
+
+
+        box.innerHTML =
+            "✅ İndirme hazır: " +
+            "<a href='" +
+            data.download_url +
+            "' download>" +
+            "DOSYAYI İNDİR" +
+            "</a>";
+
+    }
+
+    catch (error) {
+
+        hideStatus();
+
+        showError(
+            error.message
+        );
+
     }
 }
 
 
-function escapeHtml(text) {
+async function downloadMP3() {
 
-    const div =
-        document.createElement("div");
+    if (!currentVideo) {
 
-    div.textContent = text;
+        showError(
+            "Önce videoyu analiz et."
+        );
 
-    return div.innerHTML;
+        return;
+    }
+
+
+    showError(
+        "MP3 sistemi bir sonraki aşamada etkinleştirilecek."
+    );
 }
+
+
+document
+    .getElementById("urlInput")
+    .addEventListener(
+        "keydown",
+        function(event) {
+
+            if (
+                event.key === "Enter"
+            ) {
+
+                analyzeVideo();
+
+            }
+
+        }
+    );
 
 </script>
 
