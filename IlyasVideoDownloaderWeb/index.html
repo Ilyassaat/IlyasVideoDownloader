@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ilyas Downloader</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-serif;background:#0b0f14;color:#f5f7fa}
+.wrap{max-width:900px;margin:60px auto;padding:24px}
+.card{background:#121821;border:1px solid #27313d;border-radius:18px;padding:28px;box-shadow:0 20px 60px #0005}
+h1{margin:0 0 8px;font-size:34px}.sub{color:#9aa7b5;margin-bottom:28px}
+.row{display:flex;gap:10px}.row input{flex:1}
+input,select,button{border-radius:12px;border:1px solid #303b48;background:#0e141c;color:#fff;padding:14px;font-size:16px}
+button{background:#1f9d55;border:0;font-weight:700;cursor:pointer}button:disabled{opacity:.5;cursor:not-allowed}
+#result{margin-top:24px;display:none}.thumb{width:100%;max-height:360px;object-fit:cover;border-radius:14px;margin:12px 0}
+.meta{color:#aab5c1;margin:8px 0 18px}.quality{display:flex;gap:10px;flex-wrap:wrap}
+.status{margin-top:18px;padding:14px;border-radius:12px;background:#0e141c;white-space:pre-wrap}
+.download{display:inline-block;margin-top:16px;background:#2878e6;color:#fff;text-decoration:none;padding:13px 18px;border-radius:12px;font-weight:700}
+.small{font-size:13px;color:#8794a3;margin-top:18px}
+@media(max-width:650px){.row{flex-direction:column}.wrap{margin:20px auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>⬇️ Ilyas Downloader</h1>
+    <div class="sub">Web üzerinden video bilgisi ve indirme</div>
+
+    <div class="row">
+      <input id="url" placeholder="YouTube video linkini yapıştır">
+      <button id="infoBtn" onclick="getInfo()">Bilgileri Getir</button>
+    </div>
+
+    <div id="result">
+      <img id="thumb" class="thumb" alt="">
+      <h2 id="title"></h2>
+      <div id="meta" class="meta"></div>
+
+      <select id="quality"></select>
+      <button id="downloadBtn" onclick="downloadVideo()">İndir</button>
+
+      <div id="status" class="status"></div>
+      <a id="downloadLink" class="download" style="display:none">Dosyayı İndir</a>
+    </div>
+
+    <div class="small">
+      Not: YouTube'un bot/erişim kontrolleri sunucu IP'sine göre değişebilir.
+      POT provider bu sorunu azaltır ancak her videoda %100 garanti vermez.
+    </div>
+  </div>
+</div>
+
+<script>
+let currentUrl = "";
+
+function setStatus(text){ document.getElementById("status").textContent = text; }
+
+async function getInfo(){
+  const url = document.getElementById("url").value.trim();
+  if(!url){ alert("Önce link gir."); return; }
+
+  currentUrl = url;
+  const btn = document.getElementById("infoBtn");
+  btn.disabled = true;
+  btn.textContent = "Kontrol ediliyor...";
+  document.getElementById("result").style.display = "block";
+  document.getElementById("downloadLink").style.display = "none";
+  setStatus("YouTube bilgileri alınıyor...");
+
+  try{
+    const r = await fetch("/api/info", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({url})
+    });
+    const data = await r.json();
+    if(!data.success) throw new Error(data.error || "Bilinmeyen hata");
+
+    document.getElementById("title").textContent = data.title;
+    document.getElementById("meta").textContent =
+      (data.uploader || "") + (data.duration ? " • " + Math.round(data.duration) + " sn" : "");
+
+    const img = document.getElementById("thumb");
+    if(data.thumbnail){ img.src = data.thumbnail; img.style.display = "block"; }
+    else img.style.display = "none";
+
+    const q = document.getElementById("quality");
+    q.innerHTML = "";
+
+    const formats = data.formats || [];
+    const heights = [...new Set(formats.map(x => x.height).filter(Boolean))].sort((a,b)=>b-a);
+
+    if(!heights.length){
+      q.innerHTML = '<option value="">En iyi kalite</option>';
+    }else{
+      heights.forEach((h,i)=>{
+        const opt=document.createElement("option");
+        const f=formats.find(x=>x.height===h);
+        opt.value=f ? f.format_id : "";
+        opt.textContent=h+"p";
+        q.appendChild(opt);
+      });
+    }
+
+    setStatus("Hazır. Kaliteyi seçip İndir'e bas.");
+  }catch(e){
+    setStatus("Hata: " + e.message);
+  }finally{
+    btn.disabled = false;
+    btn.textContent = "Bilgileri Getir";
+  }
+}
+
+async function downloadVideo(){
+  if(!currentUrl) return;
+  const format_id = document.getElementById("quality").value || null;
+  const btn = document.getElementById("downloadBtn");
+  btn.disabled = true;
+  btn.textContent = "İndiriliyor...";
+  document.getElementById("downloadLink").style.display = "none";
+  setStatus("İndirme başlatıldı. Büyük videolarda biraz bekleyebilir...");
+
+  try{
+    const r = await fetch("/api/download", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({url:currentUrl, format_id})
+    });
+    const data = await r.json();
+    if(!data.success) throw new Error(data.error || "İndirme başarısız");
+
+    const a = document.getElementById("downloadLink");
+    a.href = data.download_url;
+    a.download = data.filename;
+    a.textContent = "⬇ " + data.filename;
+    a.style.display = "inline-block";
+    setStatus("Tamamlandı: " + data.filename);
+  }catch(e){
+    setStatus("Hata: " + e.message);
+  }finally{
+    btn.disabled = false;
+    btn.textContent = "İndir";
+  }
+}
+</script>
+</body>
+</html>
