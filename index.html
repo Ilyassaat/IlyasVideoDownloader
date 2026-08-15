@@ -1,283 +1,283 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>İlyas Video Downloader</title>
+    <title>İlyas Downloader</title>
 
-<style>
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
+    <style>
+        * {
+            box-sizing: border-box;
+        }
 
-body {
-    min-height: 100vh;
-    font-family: Arial, Helvetica, sans-serif;
-    background:
-        radial-gradient(circle at top left, #243b55 0%, transparent 35%),
-        radial-gradient(circle at bottom right, #1e3c72 0%, transparent 35%),
-        #080b10;
-    color: white;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 30px;
-}
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, Helvetica, sans-serif;
+            background:
+                radial-gradient(circle at top left, #242424 0%, transparent 35%),
+                radial-gradient(circle at bottom right, #171717 0%, transparent 40%),
+                #090909;
+            color: white;
+        }
 
-.container {
-    width: 100%;
-    max-width: 850px;
-}
+        .container {
+            width: min(900px, 94%);
+            margin: auto;
+            padding: 55px 0;
+        }
 
-.logo {
-    text-align: center;
-    margin-bottom: 30px;
-}
+        .logo {
+            text-align: center;
+            margin-bottom: 35px;
+        }
 
-.logo h1 {
-    font-size: 42px;
-    font-weight: 800;
-    letter-spacing: -2px;
-}
+        .logo h1 {
+            margin: 0;
+            font-size: 42px;
+            font-weight: 800;
+            letter-spacing: -1px;
+        }
 
-.logo span {
-    color: #4da3ff;
-}
+        .logo h1 span {
+            color: #ff3b30;
+        }
 
-.logo p {
-    margin-top: 8px;
-    color: #8994a5;
-    font-size: 15px;
-}
+        .logo p {
+            margin-top: 10px;
+            color: #999;
+            font-size: 15px;
+        }
 
-.card {
-    background: rgba(18, 23, 32, 0.92);
-    border: 1px solid rgba(255,255,255,.08);
-    border-radius: 24px;
-    padding: 28px;
-    box-shadow: 0 25px 80px rgba(0,0,0,.45);
-    backdrop-filter: blur(20px);
-}
+        .card {
+            background: rgba(25, 25, 25, 0.94);
+            border: 1px solid #303030;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 20px 70px rgba(0, 0, 0, 0.45);
+        }
 
-.url-area {
-    display: flex;
-    gap: 10px;
-}
+        .input-row {
+            display: flex;
+            gap: 10px;
+        }
 
-input {
-    flex: 1;
-    height: 56px;
-    background: #0c1118;
-    color: white;
-    border: 1px solid #293342;
-    border-radius: 14px;
-    padding: 0 18px;
-    font-size: 15px;
-    outline: none;
-}
+        #url {
+            flex: 1;
+            height: 58px;
+            padding: 0 18px;
+            border-radius: 12px;
+            border: 1px solid #383838;
+            background: #111;
+            color: white;
+            outline: none;
+            font-size: 16px;
+        }
 
-input:focus {
-    border-color: #4da3ff;
-}
+        #url:focus {
+            border-color: #ff3b30;
+        }
 
-button {
-    border: none;
-    cursor: pointer;
-    border-radius: 14px;
-    font-weight: 700;
-    transition: .2s;
-}
+        button {
+            border: none;
+            border-radius: 12px;
+            padding: 0 24px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+        }
 
-.analyze {
-    padding: 0 22px;
-    background: #4da3ff;
-    color: white;
-}
+        .info-btn {
+            background: #ff3b30;
+            color: white;
+            min-width: 150px;
+        }
 
-.analyze:hover {
-    transform: translateY(-1px);
-    background: #368fe9;
-}
+        button:hover {
+            transform: translateY(-1px);
+            opacity: 0.92;
+        }
 
-.video-info {
-    display: none;
-    margin-top: 25px;
-    padding-top: 25px;
-    border-top: 1px solid #252c37;
-}
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
 
-.video-preview {
-    display: flex;
-    gap: 18px;
-    align-items: center;
-}
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 30px 10px 10px;
+            color: #aaa;
+        }
 
-.thumbnail {
-    width: 190px;
-    height: 108px;
-    object-fit: cover;
-    border-radius: 12px;
-    background: #0c1118;
-}
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid #333;
+            border-top-color: #ff3b30;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: auto;
+        }
 
-.video-title {
-    font-size: 19px;
-    font-weight: 700;
-    line-height: 1.4;
-}
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
 
-.uploader {
-    margin-top: 8px;
-    color: #8994a5;
-    font-size: 14px;
-}
+        #result {
+            display: none;
+            margin-top: 25px;
+        }
 
-.options {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-    margin-top: 25px;
-}
+        .video-info {
+            display: flex;
+            gap: 20px;
+            padding: 18px;
+            background: #111;
+            border-radius: 15px;
+            border: 1px solid #2b2b2b;
+        }
 
-.option-box {
-    background: #0c1118;
-    border: 1px solid #252e3b;
-    padding: 18px;
-    border-radius: 16px;
-}
+        .thumbnail {
+            width: 260px;
+            height: 146px;
+            object-fit: cover;
+            border-radius: 10px;
+            background: #222;
+        }
 
-.option-box label {
-    display: block;
-    color: #8994a5;
-    font-size: 13px;
-    margin-bottom: 9px;
-}
+        .video-details {
+            flex: 1;
+        }
 
-select {
-    width: 100%;
-    height: 48px;
-    background: #151b24;
-    color: white;
-    border: 1px solid #303a48;
-    border-radius: 11px;
-    padding: 0 12px;
-    font-size: 14px;
-    outline: none;
-}
+        .video-title {
+            font-size: 20px;
+            font-weight: 700;
+            line-height: 1.35;
+            margin-bottom: 10px;
+        }
 
-.download {
-    width: 100%;
-    height: 58px;
-    margin-top: 20px;
-    background: #22c55e;
-    color: white;
-    font-size: 16px;
-}
+        .video-meta {
+            color: #888;
+            font-size: 14px;
+        }
 
-.download:hover {
-    background: #19ad50;
-    transform: translateY(-1px);
-}
+        .quality-title {
+            margin: 25px 0 12px;
+            font-size: 16px;
+            font-weight: 700;
+        }
 
-.download:disabled {
-    opacity: .5;
-    cursor: not-allowed;
-    transform: none;
-}
+        #formats {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+        }
 
-.status {
-    margin-top: 18px;
-    text-align: center;
-    color: #aab4c3;
-    font-size: 14px;
-    min-height: 20px;
-}
+        .format {
+            padding: 15px;
+            background: #151515;
+            border: 1px solid #333;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
 
-.success {
-    margin-top: 20px;
-    padding: 18px;
-    background: rgba(34,197,94,.10);
-    border: 1px solid rgba(34,197,94,.25);
-    border-radius: 14px;
-    display: none;
-}
+        .format:hover {
+            border-color: #ff3b30;
+        }
 
-.success a {
-    display: inline-block;
-    margin-top: 10px;
-    color: #4ade80;
-    font-weight: 700;
-    text-decoration: none;
-}
+        .format.selected {
+            border-color: #ff3b30;
+            background: #241313;
+        }
 
-.loading {
-    display: none;
-    margin-top: 20px;
-}
+        .format-quality {
+            font-size: 18px;
+            font-weight: 800;
+        }
 
-.progress {
-    width: 100%;
-    height: 7px;
-    border-radius: 10px;
-    background: #202733;
-    overflow: hidden;
-}
+        .format-type {
+            margin-top: 5px;
+            color: #888;
+            font-size: 13px;
+        }
 
-.progress-bar {
-    width: 0%;
-    height: 100%;
-    background: #4da3ff;
-    transition: width .3s;
-}
+        .download-btn {
+            width: 100%;
+            height: 58px;
+            margin-top: 20px;
+            background: #22c55e;
+            color: white;
+            font-size: 16px;
+        }
 
-.footer {
-    text-align: center;
-    color: #566171;
-    margin-top: 20px;
-    font-size: 12px;
-}
+        .error {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 12px;
+            background: #351414;
+            border: 1px solid #702020;
+            color: #ff8f8f;
+            line-height: 1.5;
+            word-break: break-word;
+        }
 
-@media(max-width: 650px) {
+        .success {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 12px;
+            background: #102b1a;
+            border: 1px solid #1d6637;
+            color: #7ee2a0;
+        }
 
-    body {
-        padding: 15px;
-    }
+        .footer {
+            text-align: center;
+            margin-top: 25px;
+            color: #555;
+            font-size: 13px;
+        }
 
-    .card {
-        padding: 18px;
-    }
+        @media (max-width: 650px) {
+            .container {
+                padding: 30px 0;
+            }
 
-    .logo h1 {
-        font-size: 32px;
-    }
+            .logo h1 {
+                font-size: 32px;
+            }
 
-    .url-area {
-        flex-direction: column;
-    }
+            .input-row {
+                flex-direction: column;
+            }
 
-    .analyze {
-        height: 52px;
-    }
+            .info-btn {
+                height: 55px;
+            }
 
-    .video-preview {
-        flex-direction: column;
-        align-items: stretch;
-    }
+            .video-info {
+                flex-direction: column;
+            }
 
-    .thumbnail {
-        width: 100%;
-        height: auto;
-        aspect-ratio: 16/9;
-    }
+            .thumbnail {
+                width: 100%;
+                height: auto;
+                aspect-ratio: 16 / 9;
+            }
 
-    .options {
-        grid-template-columns: 1fr;
-    }
-}
-</style>
+            #formats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
 </head>
 
 <body>
@@ -286,43 +286,38 @@ select {
 
     <div class="logo">
         <h1>İlyas <span>Downloader</span></h1>
-        <p>YouTube • TikTok • Instagram • Video & Audio</p>
+        <p>Video bağlantısını yapıştır, kaliteyi seç ve indir.</p>
     </div>
 
     <div class="card">
 
-        <div class="url-area">
-
+        <div class="input-row">
             <input
-                id="videoUrl"
+                id="url"
                 type="text"
-                placeholder="Video bağlantısını buraya yapıştır..."
+                placeholder="YouTube video bağlantısını buraya yapıştır..."
                 autocomplete="off"
             >
 
             <button
-                class="analyze"
-                onclick="analyzeVideo()"
+                id="infoBtn"
+                class="info-btn"
+                onclick="getInfo()"
             >
-                Analiz Et
+                Videoyu Getir
             </button>
-
         </div>
 
-        <div class="status" id="status"></div>
-
-        <div class="loading" id="loading">
-            <div class="progress">
-                <div
-                    class="progress-bar"
-                    id="progressBar"
-                ></div>
-            </div>
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Video bilgileri alınıyor...</p>
         </div>
 
-        <div class="video-info" id="videoInfo">
+        <div id="error" class="error"></div>
 
-            <div class="video-preview">
+        <div id="result">
+
+            <div class="video-info">
 
                 <img
                     id="thumbnail"
@@ -331,127 +326,41 @@ select {
                     alt="Video"
                 >
 
-                <div>
+                <div class="video-details">
+
                     <div
+                        id="title"
                         class="video-title"
-                        id="videoTitle"
                     >
+                        Video
                     </div>
 
                     <div
-                        class="uploader"
-                        id="uploader"
+                        id="meta"
+                        class="video-meta"
                     >
                     </div>
-                </div>
-
-            </div>
-
-            <div class="options">
-
-                <div class="option-box">
-
-                    <label>
-                        Dosya Türü
-                    </label>
-
-                    <select
-                        id="downloadType"
-                        onchange="changeType()"
-                    >
-
-                        <option value="video">
-                            🎬 MP4 Video
-                        </option>
-
-                        <option value="audio">
-                            🎵 MP3 Ses
-                        </option>
-
-                    </select>
-
-                </div>
-
-                <div
-                    class="option-box"
-                    id="videoQualityBox"
-                >
-
-                    <label>
-                        Video Kalitesi
-                    </label>
-
-                    <select id="quality">
-
-                        <option value="best">
-                            En yüksek kalite
-                        </option>
-
-                    </select>
-
-                </div>
-
-                <div
-                    class="option-box"
-                    id="audioQualityBox"
-                    style="display:none"
-                >
-
-                    <label>
-                        MP3 Kalitesi
-                    </label>
-
-                    <select id="audioQuality">
-
-                        <option value="320">
-                            320 kbps
-                        </option>
-
-                        <option value="256">
-                            256 kbps
-                        </option>
-
-                        <option value="192" selected>
-                            192 kbps
-                        </option>
-
-                        <option value="128">
-                            128 kbps
-                        </option>
-
-                    </select>
 
                 </div>
 
             </div>
+
+            <div class="quality-title">
+                Video Kalitesi
+            </div>
+
+            <div id="formats"></div>
 
             <button
-                class="download"
-                id="downloadButton"
+                id="downloadBtn"
+                class="download-btn"
                 onclick="downloadVideo()"
+                disabled
             >
-                ⬇ İndirmeyi Başlat
+                📥 Videoyu İndir
             </button>
 
-        </div>
-
-        <div
-            class="success"
-            id="success"
-        >
-
-            <strong>
-                ✅ İndirme tamamlandı
-            </strong>
-
-            <br>
-
-            <a
-                id="downloadLink"
-                href="#"
-            >
-                Dosyayı indir
-            </a>
+            <div id="success" class="success"></div>
 
         </div>
 
@@ -467,296 +376,243 @@ select {
 <script>
 
 let currentUrl = "";
+let selectedFormat = null;
 
 
-/* -----------------------------------
-   DURUM MESAJI
------------------------------------ */
+function showError(message) {
 
-function setStatus(message) {
+    const error = document.getElementById("error");
 
-    document.getElementById(
-        "status"
-    ).textContent = message;
-
+    error.style.display = "block";
+    error.textContent = "Hata: " + message;
 }
 
 
-/* -----------------------------------
-   VİDEO ANALİZ
------------------------------------ */
+function hideError() {
 
-async function analyzeVideo() {
+    const error = document.getElementById("error");
+
+    error.style.display = "none";
+    error.textContent = "";
+}
+
+
+function showLoading(show) {
+
+    document.getElementById("loading").style.display =
+        show ? "block" : "none";
+
+    document.getElementById("infoBtn").disabled = show;
+}
+
+
+async function getInfo() {
+
+    hideError();
+
+    document.getElementById("success").style.display = "none";
 
     const url =
-        document.getElementById(
-            "videoUrl"
-        ).value.trim();
+        document.getElementById("url").value.trim();
 
     if (!url) {
 
-        setStatus(
-            "Lütfen video bağlantısı gir."
-        );
+        showError("Önce bir video bağlantısı gir.");
 
         return;
     }
 
     currentUrl = url;
 
-    setStatus(
-        "Video analiz ediliyor..."
+    selectedFormat = null;
+
+    document.getElementById("result").style.display = "none";
+
+    showLoading(true);
+
+    try {
+
+        const response = await fetch(
+            "/api/info",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify({
+                    url: url
+                })
+            }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+
+            throw new Error(
+                data.error || "Video bilgileri alınamadı."
+            );
+        }
+
+        showVideo(data);
+
+    } catch (error) {
+
+        showError(error.message);
+
+    } finally {
+
+        showLoading(false);
+    }
+}
+
+
+function showVideo(data) {
+
+    document.getElementById("result").style.display =
+        "block";
+
+    document.getElementById("title").textContent =
+        data.title || "Video";
+
+    document.getElementById("thumbnail").src =
+        data.thumbnail || "";
+
+    let meta = "";
+
+    if (data.uploader) {
+        meta += data.uploader;
+    }
+
+    if (data.duration) {
+
+        if (meta) {
+            meta += " • ";
+        }
+
+        meta += formatDuration(data.duration);
+    }
+
+    document.getElementById("meta").textContent =
+        meta;
+
+    const formats =
+        document.getElementById("formats");
+
+    formats.innerHTML = "";
+
+    const unique =
+        new Map();
+
+    for (const format of data.formats || []) {
+
+        const height =
+            format.height || 0;
+
+        if (!height) {
+            continue;
+        }
+
+        const key =
+            height + "-" + format.ext;
+
+        if (!unique.has(key)) {
+            unique.set(key, format);
+        }
+    }
+
+    const list =
+        Array.from(unique.values());
+
+    list.sort(
+        (a, b) =>
+            (b.height || 0) -
+            (a.height || 0)
     );
 
-    document.getElementById(
-        "videoInfo"
-    ).style.display = "none";
+    for (const format of list) {
+
+        const item =
+            document.createElement("div");
+
+        item.className = "format";
+
+        item.innerHTML = `
+            <div class="format-quality">
+                ${format.height}p
+            </div>
+
+            <div class="format-type">
+                ${format.ext.toUpperCase()}
+                ${format.fps ? " • " + format.fps + " FPS" : ""}
+            </div>
+        `;
+
+        item.onclick = () => {
+
+            document
+                .querySelectorAll(".format")
+                .forEach(el =>
+                    el.classList.remove("selected")
+                );
+
+            item.classList.add("selected");
+
+            selectedFormat =
+                format.format_id;
+
+            document.getElementById(
+                "downloadBtn"
+            ).disabled = false;
+        };
+
+        formats.appendChild(item);
+    }
+
+    if (list.length > 0) {
+
+        const first =
+            formats.firstElementChild;
+
+        first.click();
+
+    } else {
+
+        document.getElementById(
+            "downloadBtn"
+        ).disabled = false;
+    }
+}
+
+
+async function downloadVideo() {
+
+    hideError();
 
     document.getElementById(
         "success"
     ).style.display = "none";
 
-    try {
-
-        const response =
-            await fetch(
-                "/api/info",
-                {
-
-                    method: "POST",
-
-                    headers: {
-                        "Content-Type":
-                            "application/json"
-                    },
-
-                    body: JSON.stringify({
-                        url: url
-                    })
-
-                }
-            );
-
-        const data =
-            await response.json();
-
-        if (!data.success) {
-
-            throw new Error(
-                data.error ||
-                "Video analiz edilemedi."
-            );
-
-        }
-
-        document.getElementById(
-            "videoTitle"
-        ).textContent =
-            data.title || "Video";
-
-        document.getElementById(
-            "uploader"
-        ).textContent =
-            data.uploader
-            ? "Kanal: " + data.uploader
-            : "";
-
-        if (data.thumbnail) {
-
-            document.getElementById(
-                "thumbnail"
-            ).src =
-                data.thumbnail;
-
-        }
-
-        const quality =
-            document.getElementById(
-                "quality"
-            );
-
-        quality.innerHTML = "";
-
-        const bestOption =
-            document.createElement(
-                "option"
-            );
-
-        bestOption.value = "best";
-
-        bestOption.textContent =
-            "En yüksek kalite";
-
-        quality.appendChild(
-            bestOption
-        );
-
-        const resolutions =
-            data.resolutions || [];
-
-        resolutions.forEach(
-            function(height) {
-
-                const option =
-                    document.createElement(
-                        "option"
-                    );
-
-                option.value =
-                    height;
-
-                option.textContent =
-                    height + "p";
-
-                quality.appendChild(
-                    option
-                );
-
-            }
-        );
-
-        document.getElementById(
-            "videoInfo"
-        ).style.display =
-            "block";
-
-        setStatus(
-            "Video hazır."
-        );
-
-    }
-    catch(error) {
-
-        setStatus(
-            "Hata: " +
-            error.message
-        );
-
-    }
-
-}
-
-
-/* -----------------------------------
-   MP4 / MP3 DEĞİŞTİR
------------------------------------ */
-
-function changeType() {
-
-    const type =
-        document.getElementById(
-            "downloadType"
-        ).value;
-
-    const videoBox =
-        document.getElementById(
-            "videoQualityBox"
-        );
-
-    const audioBox =
-        document.getElementById(
-            "audioQualityBox"
-        );
-
-    if (type === "audio") {
-
-        videoBox.style.display =
-            "none";
-
-        audioBox.style.display =
-            "block";
-
-    }
-    else {
-
-        videoBox.style.display =
-            "block";
-
-        audioBox.style.display =
-            "none";
-
-    }
-
-}
-
-
-/* -----------------------------------
-   İNDİR
------------------------------------ */
-
-async function downloadVideo() {
-
     if (!currentUrl) {
 
-        setStatus(
-            "Önce videoyu analiz et."
+        showError(
+            "Önce video bağlantısını gir."
         );
 
         return;
     }
 
-    const type =
-        document.getElementById(
-            "downloadType"
-        ).value;
-
-    const quality =
-        document.getElementById(
-            "quality"
-        ).value;
-
-    const audioQuality =
-        document.getElementById(
-            "audioQuality"
-        ).value;
-
     const button =
         document.getElementById(
-            "downloadButton"
+            "downloadBtn"
         );
 
     button.disabled = true;
 
-    document.getElementById(
-        "success"
-    ).style.display =
-        "none";
-
-    document.getElementById(
-        "loading"
-    ).style.display =
-        "block";
-
-    let progress = 10;
-
-    document.getElementById(
-        "progressBar"
-    ).style.width =
-        progress + "%";
-
-    setStatus(
-        "İndirme hazırlanıyor..."
-    );
-
-    const timer =
-        setInterval(
-            function() {
-
-                if (progress < 90) {
-
-                    progress += 5;
-
-                    document.getElementById(
-                        "progressBar"
-                    ).style.width =
-                        progress + "%";
-
-                }
-
-            },
-            500
-        );
-
+    button.textContent =
+        "⏳ İndiriliyor...";
 
     try {
 
@@ -764,7 +620,6 @@ async function downloadVideo() {
             await fetch(
                 "/api/download",
                 {
-
                     method: "POST",
 
                     headers: {
@@ -773,80 +628,132 @@ async function downloadVideo() {
                     },
 
                     body: JSON.stringify({
-
-                        url:
-                            currentUrl,
-
-                        type:
-                            type,
-
-                        quality:
-                            quality,
-
-                        audio_quality:
-                            audioQuality
-
+                        url: currentUrl,
+                        format_id: selectedFormat
                     })
-
                 }
             );
 
         const data =
             await response.json();
 
-        clearInterval(timer);
-
-        if (!data.success) {
+        if (!response.ok || !data.success) {
 
             throw new Error(
                 data.error ||
-                "İndirme başarısız."
+                "Video indirilemedi."
             );
-
         }
 
-        document.getElementById(
-            "progressBar"
-        ).style.width =
-            "100%";
-
-        setStatus(
-            "İndirme tamamlandı."
-        );
-
-        const link =
+        const success =
             document.getElementById(
-                "downloadLink"
+                "success"
             );
+
+        success.style.display =
+            "block";
+
+        success.innerHTML =
+            `İndirme tamamlandı: <strong>${escapeHtml(data.filename)}</strong>`;
+
+        /*
+         * Dosyanın tarayıcıya indirilmesini başlat.
+         */
+        const link =
+            document.createElement("a");
 
         link.href =
             data.download_url;
 
-        link.download = "";
+        link.download =
+            data.filename;
 
-        document.getElementById(
-            "success"
-        ).style.display =
-            "block";
+        document.body.appendChild(link);
 
-    }
-    catch(error) {
+        link.click();
 
-        clearInterval(timer);
+        link.remove();
 
-        setStatus(
-            "Hata: " +
-            error.message
-        );
+    } catch (error) {
 
-    }
-    finally {
+        showError(error.message);
+
+    } finally {
 
         button.disabled = false;
 
+        button.textContent =
+            "📥 Videoyu İndir";
+    }
+}
+
+
+function formatDuration(seconds) {
+
+    seconds =
+        Number(seconds);
+
+    if (!Number.isFinite(seconds)) {
+        return "";
     }
 
+    const hours =
+        Math.floor(seconds / 3600);
+
+    const minutes =
+        Math.floor(
+            (seconds % 3600) / 60
+        );
+
+    const secs =
+        Math.floor(
+            seconds % 60
+        );
+
+    if (hours > 0) {
+
+        return (
+            String(hours).padStart(2, "0") +
+            ":" +
+            String(minutes).padStart(2, "0") +
+            ":" +
+            String(secs).padStart(2, "0")
+        );
+
+    }
+
+    return (
+        String(minutes).padStart(2, "0") +
+        ":" +
+        String(secs).padStart(2, "0")
+    );
 }
+
+
+function escapeHtml(text) {
+
+    const div =
+        document.createElement("div");
+
+    div.textContent =
+        text;
+
+    return div.innerHTML;
+}
+
+
+document
+    .getElementById("url")
+    .addEventListener(
+        "keydown",
+        function(event) {
+
+            if (event.key === "Enter") {
+                getInfo();
+            }
+
+        }
+    );
 
 </script>
 
