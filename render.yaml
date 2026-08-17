@@ -2,10 +2,19 @@ services:
   - type: web
     name: ilyasvideodownloader
     runtime: python
+    plan: free
 
-    buildCommand: pip install -r requirements.txt
+    buildCommand: |
+      pip install -r requirements.txt
+      apt-get update
+      apt-get install -y nodejs npm
+      cd bgutil-ytdlp-pot-provider/server
+      npm ci
+      npx tsc
 
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    startCommand: |
+      node bgutil-ytdlp-pot-provider/server/build/main.js --port 4416 &
+      gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 900
 
     envVars:
       - key: PYTHON_VERSION
