@@ -6,8 +6,6 @@ services:
 
     buildCommand: |
       pip install -r requirements.txt
-      apt-get update
-      apt-get install -y nodejs npm
       cd bgutil-ytdlp-pot-provider/server
       npm ci
       npx tsc
